@@ -15,11 +15,13 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "your-secret-key-here")
 
 # Database configuration
+DATABASE_URL = os.environ.get("DATABASE_URL")
+
 DB_CONFIG = {
     "host": os.environ.get("DB_HOST", "localhost"),
     "database": os.environ.get("DB_NAME", "agriclture"),
     "user": os.environ.get("DB_USER", "postgres"),
-    "password": os.environ.get("DB_PASSWORD", "nkb@207119"),
+    "password": os.environ.get("DB_PASSWORD", ""),
     "port": os.environ.get("DB_PORT", "5432")
 }
 
@@ -38,12 +40,17 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 def get_db():
     """Get database connection"""
     try:
-        conn = psycopg2.connect(**DB_CONFIG)
+        if DATABASE_URL:
+            conn = psycopg2.connect(DATABASE_URL)
+        else:
+            conn = psycopg2.connect(**DB_CONFIG)
+
         return conn
+
     except Exception as e:
         logger.error(f"Database connection error: {e}")
         return None
-
+    
 def get_db_connection():
     """Alias for get_db for diesel app compatibility"""
     return get_db()
