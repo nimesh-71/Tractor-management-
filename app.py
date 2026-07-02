@@ -186,6 +186,9 @@ def init_db():
     finally:
         cursor.close()
         conn.close()
+        
+# Create database tables when the application starts
+init_db()    
 
 # ==================== STATISTICS FUNCTIONS ====================
 
@@ -540,6 +543,14 @@ def update_purchase(sl_no, purchase_date, amount, rate, product, bill_image_path
         conn.rollback()
         return False
 
+# ==================== AUTO INITIALIZE DATABASE ====================
+
+try:
+    logger.info("Initializing database...")
+    init_db()
+    logger.info("Database initialized successfully.")
+except Exception as e:
+    logger.error(f"Database initialization failed: {e}")
 # ==================== ROUTES ====================
 
 @app.route('/')
@@ -827,7 +838,7 @@ def debug_simple():
 # ==================== MAIN ====================
 
 if __name__ == '__main__':
-    init_db()
+
     port = int(os.environ.get("PORT", 5000))
     print("\n" + "="*60)
     print("🚀 Unified Agriculture Management System")
