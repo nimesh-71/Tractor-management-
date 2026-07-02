@@ -5,4 +5,5 @@ eventlet==0.33.3
 psycopg[binary]==3.1.20
 Werkzeug==2.3.8
 gunicorn==21.2.0
-psycopg[binary]==3.1.20
+gevent==24.11.1
+gevent-websocket==0.10.1
