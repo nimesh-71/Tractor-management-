@@ -4,3 +4,6 @@ python-socketio==5.10.0
 eventlet==0.33.3
 psycopg2-binary==2.9.9
 Werkzeug==2.3.8
+gunicorn==21.2.0
+gevent==23.9.1
+gevent-websocket==0.10.1
