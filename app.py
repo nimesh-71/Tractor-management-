@@ -818,20 +818,34 @@ def insert_tractor_operation():
             flash(f'Error: {str(e)}', 'error')
             return redirect(url_for('tractor_operation_form'))
 
-@app.route('/debug-simple')
-def debug_simple():
-    """Simple debug route"""
+@app.route("/dbcheck")
+def dbcheck():
     try:
-        conn = get_db_connection()
+        conn = get_db()
         if not conn:
             return "❌ Database connection failed!"
-        
+
         cursor = conn.cursor()
+
         cursor.execute("SELECT COUNT(*) FROM diesel_purchase")
-        count = cursor.fetchone()[0]
+        diesel = cursor.fetchone()[0]
+
+        cursor.execute("SELECT COUNT(*) FROM daily_tractor")
+        tractor = cursor.fetchone()[0]
+
+        cursor.execute("SELECT COUNT(*) FROM tractor_operations")
+        operations = cursor.fetchone()[0]
+
         cursor.close()
         conn.close()
-        return f"✅ Database connected! Found {count} records."
+
+        return f"""
+        <h2>Database Check</h2>
+        Diesel Purchase Records: {diesel}<br>
+        Daily Tractor Records: {tractor}<br>
+        Tractor Operation Records: {operations}
+        """
+
     except Exception as e:
         return f"❌ Error: {str(e)}"
 
