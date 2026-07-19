@@ -1,318 +1,831 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agriculture Management System</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>🚜 Agriculture Management System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        /* ===== RESET & BASE ===== */
         * {
-            font-family: 'Noto Sans Devanagari', 'Mangal', sans-serif !important;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        
+
         body {
-            font-family: 'Noto Sans Devanagari', 'Mangal', sans-serif !important;
+            font-family: 'Segoe UI', 'Nirmala UI', Tahoma, Geneva, Verdana, sans-serif;
             background: #f0f2f5;
+            min-height: 100vh;
+            padding: 0;
         }
-        
-        h1, h2, h3, h4, h5, h6 {
-            font-family: 'Noto Sans Devanagari', 'Mangal', sans-serif !important;
+
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 20px;
         }
-        
-        input, select, textarea, button, label {
-            font-family: 'Noto Sans Devanagari', 'Mangal', sans-serif !important;
+
+        /* ===== COMBINED HEADER + NAV BAR ===== */
+        .header-nav-wrapper {
+            background: linear-gradient(135deg, #1a252f 0%, #2c3e50 50%, #1a252f 100%);
+            border-radius: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+            overflow: hidden;
+            position: relative;
         }
-        
+
+        .header-nav-wrapper::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(52,152,219,0.05) 0%, transparent 70%);
+            animation: shimmer 8s linear infinite;
+            background-size: 200% 200%;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        /* ===== HEADER ===== */
         .header {
-            background: linear-gradient(135deg, #2d6a4f 0%, #1b4332 100%);
+            text-align: center;
+            padding: 30px 25px 20px 25px;
             color: white;
-            padding: 30px 0;
-            margin-bottom: 30px;
-            box-shadow: 0 4px 20px rgba(45, 106, 79, 0.3);
+            position: relative;
+            z-index: 1;
         }
-        
+
+        .header .logo-icon {
+            font-size: 3rem;
+            display: block;
+            margin-bottom: 5px;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
         .header h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            background: linear-gradient(135deg, #f1c40f, #f39c12);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header .subtitle {
+            font-size: 1rem;
+            opacity: 0.85;
+            margin-top: 4px;
+            color: #a8c8e8;
+            -webkit-text-fill-color: #a8c8e8;
+        }
+
+        .header .date-time {
+            margin-top: 8px;
+            font-size: 0.8rem;
+            opacity: 0.7;
+            background: rgba(255,255,255,0.08);
+            padding: 4px 16px;
+            border-radius: 30px;
+            display: inline-block;
+            backdrop-filter: blur(10px);
+        }
+
+        .header .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #27ae60;
+            border-radius: 50%;
+            margin-right: 6px;
+            animation: pulse 2s infinite;
+        }
+
+        /* ===== TOP NAVIGATION BAR ===== */
+        .top-nav {
+            background: rgba(0,0,0,0.25);
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: nowrap;
+            position: relative;
+            z-index: 1;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            height: 56px;
+            overflow: hidden;
+        }
+
+        .top-nav .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-shrink: 0;
+        }
+
+        .top-nav .nav-left .brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: white;
+            font-size: 1.2rem;
             font-weight: 700;
-            font-size: 32px;
-            font-family: 'Noto Sans Devanagari', 'Mangal', sans-serif !important;
+            padding: 0;
+            text-decoration: none;
+            white-space: nowrap;
         }
-        
-        .header p {
-            opacity: 0.9;
-            font-size: 16px;
+
+        .top-nav .nav-left .brand i {
+            color: #f1c40f;
+            font-size: 1.3rem;
         }
-        
-        .dashboard-card {
+
+        .top-nav .nav-left .brand span {
+            color: #f1c40f;
+        }
+
+        .top-nav .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            flex: 1;
+            justify-content: center;
+        }
+
+        .top-nav .nav-links a {
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            padding: 8px 18px;
+            font-size: 1rem;
+            font-weight: 500;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+
+        .top-nav .nav-links a:hover {
+            color: white;
+            background: rgba(255,255,255,0.1);
+        }
+
+        .top-nav .nav-links a.active {
+            color: white;
+            background: rgba(255,255,255,0.12);
+            border-bottom: 2px solid #f1c40f;
+        }
+
+        .top-nav .nav-links a i {
+            font-size: 1rem;
+        }
+
+        .top-nav .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
+        .top-nav .nav-right .upi-badge {
+            background: rgba(255,255,255,0.08);
+            color: #f1c40f;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid rgba(255,255,255,0.06);
+            white-space: nowrap;
+        }
+
+        .top-nav .nav-right .upi-badge i {
+            font-size: 0.9rem;
+        }
+
+        .top-nav .nav-right .date-badge {
+            color: rgba(255,255,255,0.5);
+            font-size: 0.85rem;
+            padding: 6px 14px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+            white-space: nowrap;
+        }
+
+        .top-nav .nav-right .date-badge i {
+            margin-right: 4px;
+        }
+
+        /* Mobile Menu Toggle */
+        .nav-toggle {
+            display: none;
+            color: white;
+            font-size: 1.3rem;
+            cursor: pointer;
+            padding: 6px 12px;
+            background: none;
+            border: none;
+        }
+
+        .nav-toggle:hover {
+            background: rgba(255,255,255,0.08);
+            border-radius: 4px;
+        }
+
+        /* ===== STATS GRID - Auto adjusts ===== */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
             background: white;
-            border-radius: 16px;
-            padding: 25px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-            transition: all 0.3s;
-            height: 100%;
-            border: 2px solid transparent;
+            border-radius: 12px;
+            padding: 15px 18px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+            transition: all 0.3s ease;
+            border-left: 4px solid #3498db;
             position: relative;
             overflow: hidden;
-            text-decoration: none;
-            color: inherit;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-3px) scale(1.01);
+            box-shadow: 0 6px 25px rgba(0,0,0,0.12);
+        }
+
+        .stat-card .stat-icon {
+            font-size: 1.5rem;
             display: block;
+            margin-bottom: 2px;
         }
-        
-        .dashboard-card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 8px 30px rgba(0,0,0,0.15);
-            border-color: #2d6a4f;
+
+        .stat-card .stat-number {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: #2c3e50;
+            line-height: 1.2;
         }
-        
-        .dashboard-card .icon {
-            font-size: 48px;
-            color: #2d6a4f;
-            margin-bottom: 15px;
-            opacity: 0.8;
-        }
-        
-        .dashboard-card h3 {
-            font-size: 20px;
+
+        .stat-card .stat-number .currency {
+            font-size: 1rem;
             font-weight: 600;
-            font-family: 'Noto Sans Devanagari', 'Mangal', sans-serif !important;
+            color: #7f8c8d;
         }
-        
-        .dashboard-card .stats {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin-top: 15px;
-        }
-        
-        .dashboard-card .stats .stat-item {
-            text-align: center;
-            padding: 8px 5px;
-            background: #f8f9fa;
-            border-radius: 8px;
-        }
-        
-        .dashboard-card .stats .stat-item .number {
-            font-size: 22px;
-            font-weight: 700;
-            color: #2d6a4f;
-        }
-        
-        .dashboard-card .stats .stat-item .label {
-            font-size: 11px;
-            color: #999;
+
+        .stat-card .stat-label {
+            font-size: 0.7rem;
+            color: #7f8c8d;
+            margin-top: 2px;
+            font-weight: 500;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.3px;
         }
-        
-        .dashboard-card .arrow {
-            position: absolute;
-            bottom: 15px;
-            right: 20px;
-            font-size: 24px;
-            color: #2d6a4f;
-            opacity: 0.3;
-            transition: all 0.3s;
+
+        .stat-card .stat-change {
+            font-size: 0.6rem;
+            margin-top: 2px;
+            padding: 1px 8px;
+            border-radius: 10px;
+            display: inline-block;
         }
-        
-        .dashboard-card:hover .arrow {
-            opacity: 1;
-            transform: translateX(5px);
+
+        .stat-change.up { background: #eafaf1; color: #27ae60; }
+        .stat-change.down { background: #fdedec; color: #e74c3c; }
+        .stat-change.neutral { background: #ebf5fb; color: #2980b9; }
+
+        .stat-card.blue { border-left-color: #3498db; }
+        .stat-card.green { border-left-color: #27ae60; }
+        .stat-card.orange { border-left-color: #f39c12; }
+        .stat-card.red { border-left-color: #e74c3c; }
+        .stat-card.purple { border-left-color: #9b59b6; }
+        .stat-card.teal { border-left-color: #1abc9c; }
+
+        /* ===== MENU GRID - Auto adjusts ===== */
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 18px;
+            margin-bottom: 25px;
         }
-        
-        .dashboard-card.diesel { border-top: 4px solid #4361ee; }
-        .dashboard-card.tractor { border-top: 4px solid #2d6a4f; }
-        .dashboard-card.operation { border-top: 4px solid #d4a373; }
-        
-        .dashboard-card.diesel .icon { color: #4361ee; }
-        .dashboard-card.tractor .icon { color: #2d6a4f; }
-        .dashboard-card.operation .icon { color: #d4a373; }
-        
-        .dashboard-card.diesel .stats .stat-item .number { color: #4361ee; }
-        .dashboard-card.tractor .stats .stat-item .number { color: #2d6a4f; }
-        .dashboard-card.operation .stats .stat-item .number { color: #d4a373; }
-        
-        .dashboard-card .description {
-            color: #6c757d;
-            font-size: 14px;
+
+        .menu-card {
+            background: white;
+            border-radius: 14px;
+            padding: 22px 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+            transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+            text-decoration: none;
+            color: #2c3e50;
+            display: block;
+            border: 2px solid transparent;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .menu-card:hover {
+            transform: translateY(-6px) scale(1.01);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+            border-color: #3498db;
+        }
+
+        .menu-card .card-icon-wrapper {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .menu-card:hover .card-icon-wrapper {
+            transform: scale(1.1) rotate(-5deg);
+        }
+
+        .menu-card .icon-bg-blue { background: #ebf5fb; }
+        .menu-card .icon-bg-green { background: #eafaf1; }
+        .menu-card .icon-bg-orange { background: #fef9e7; }
+        .menu-card .icon-bg-purple { background: #f4ecf7; }
+
+        .menu-card h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .menu-card p {
+            color: #7f8c8d;
+            font-size: 0.85rem;
+            line-height: 1.5;
             margin-bottom: 10px;
         }
-        
-        .flash-messages {
-            position: fixed;
-            top: 80px;
-            right: 20px;
-            z-index: 1000;
-            min-width: 300px;
-            max-width: 450px;
+
+        .menu-card .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px;
         }
-        
-        .flash-messages .alert {
+
+        .menu-card .badge {
+            display: inline-block;
+            padding: 2px 12px;
+            border-radius: 16px;
+            font-size: 0.65rem;
+            font-weight: 600;
+        }
+
+        .badge-blue { background: #ebf5fb; color: #2980b9; }
+        .badge-green { background: #eafaf1; color: #27ae60; }
+        .badge-orange { background: #fef9e7; color: #f39c12; }
+        .badge-purple { background: #f4ecf7; color: #8e44ad; }
+        .badge-red { background: #fdedec; color: #e74c3c; }
+
+        .menu-card .arrow {
+            font-size: 1.1rem;
+            opacity: 0.3;
+            transition: all 0.3s ease;
+        }
+
+        .menu-card:hover .arrow {
+            opacity: 1;
+            transform: translateX(4px) scale(1.1);
+            color: #3498db;
+        }
+
+        .menu-card .hot-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #e74c3c;
+            color: white;
+            font-size: 0.55rem;
+            padding: 2px 8px;
             border-radius: 10px;
-            border: none;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-            padding: 12px 18px;
-            font-family: 'Noto Sans Devanagari', 'Mangal', sans-serif !important;
+            font-weight: 700;
+            animation: pulse 1.5s infinite;
         }
-        
+
+        /* ===== FOOTER ===== */
+        .footer {
+            text-align: center;
+            padding: 20px 20px 10px;
+            color: #7f8c8d;
+            font-size: 0.75rem;
+        }
+
+        .footer .version-info {
+            margin-top: 8px;
+            font-size: 0.65rem;
+            opacity: 0.5;
+        }
+
+        /* ================================================================ */
+        /* ===== RESPONSIVE - AUTO ADJUSTS FOR ALL SCREEN SIZES ===== */
+        /* ================================================================ */
+
+        /* LAPTOP / DESKTOP - Default (992px and above) */
+        /* Already set above */
+
+        /* TABLET / SMALL LAPTOP (768px - 992px) */
+        @media (max-width: 992px) {
+            .header h1 { font-size: 2rem; }
+            .header .logo-icon { font-size: 2.5rem; }
+            .stats-grid { grid-template-columns: repeat(3, 1fr); }
+            .top-nav .nav-links a { padding: 6px 14px; font-size: 0.9rem; }
+            .top-nav .nav-right .date-badge { display: none; }
+            .menu-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        /* TABLET PORTRAIT / LARGE PHONE (576px - 768px) */
         @media (max-width: 768px) {
-            .header {
-                padding: 20px 0;
+            body { padding: 0; }
+            .container { padding: 12px; }
+
+            .header { padding: 20px 15px 15px 15px; }
+            .header h1 { font-size: 1.5rem; }
+            .header .logo-icon { font-size: 2.2rem; }
+            .header .subtitle { font-size: 0.85rem; }
+            .header .date-time { font-size: 0.7rem; }
+
+            .top-nav { 
+                padding: 0 12px; 
+                flex-wrap: wrap; 
+                height: auto;
+                min-height: 48px;
             }
-            .header h1 {
-                font-size: 24px;
+            .top-nav .nav-left .brand { font-size: 1rem; }
+
+            .nav-toggle { display: block; }
+            .top-nav .nav-links {
+                display: none;
+                width: 100%;
+                flex-direction: column;
+                padding: 8px 0 12px 0;
+                gap: 2px;
             }
-            .dashboard-card {
-                padding: 20px;
+            .top-nav .nav-links.open {
+                display: flex;
             }
-            .dashboard-card .stats {
-                grid-template-columns: repeat(3, 1fr);
-                gap: 8px;
+            .top-nav .nav-links a {
+                width: 100%;
+                padding: 10px 16px;
+                font-size: 0.95rem;
+                border-radius: 4px;
+                justify-content: center;
             }
-            .flash-messages {
-                min-width: auto;
-                width: 90%;
-                right: 5%;
+            .top-nav .nav-links a.active {
+                border-bottom: none;
+                background: rgba(255,255,255,0.12);
             }
+            .top-nav .nav-right .upi-badge { font-size: 0.7rem; padding: 4px 10px; }
+            .top-nav .nav-right .upi-badge span { display: none; }
+
+            .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            .menu-grid { grid-template-columns: 1fr; }
+            .stat-card .stat-number { font-size: 1.3rem; }
+            .stat-card { padding: 12px 14px; }
         }
-        
+
+        /* MOBILE (480px and below) */
         @media (max-width: 480px) {
-            .dashboard-card .stats {
-                grid-template-columns: 1fr 1fr;
-            }
+            .container { padding: 8px; }
+            
+            .header { padding: 15px 10px 12px 10px; }
+            .header h1 { font-size: 1.2rem; }
+            .header .logo-icon { font-size: 1.8rem; }
+            .header .subtitle { font-size: 0.75rem; }
+            .header .date-time { font-size: 0.6rem; padding: 3px 12px; }
+            
+            .top-nav { padding: 0 8px; min-height: 44px; }
+            .top-nav .nav-left .brand { font-size: 0.85rem; }
+            .top-nav .nav-left .brand i { font-size: 1rem; }
+            .top-nav .nav-links a { font-size: 0.85rem; padding: 8px 14px; }
+            .top-nav .nav-right .upi-badge { font-size: 0.55rem; padding: 2px 8px; }
+            .top-nav .nav-right .upi-badge i { font-size: 0.6rem; }
+            
+            .stats-grid { grid-template-columns: 1fr; gap: 8px; }
+            .stat-card .stat-number { font-size: 1.1rem; }
+            .stat-card .stat-icon { font-size: 1.2rem; }
+            .stat-card .stat-label { font-size: 0.6rem; }
+            .stat-card { padding: 10px 12px; }
+            
+            .menu-grid { gap: 12px; }
+            .menu-card { padding: 16px 14px; }
+            .menu-card h3 { font-size: 1rem; }
+            .menu-card p { font-size: 0.8rem; }
+            .menu-card .card-icon-wrapper { width: 40px; height: 40px; font-size: 1.4rem; }
+            .menu-card .card-footer .badge { font-size: 0.6rem; padding: 2px 10px; }
+            
+            .footer { font-size: 0.65rem; padding: 12px 10px 8px; }
+            .footer .version-info { font-size: 0.55rem; }
+        }
+
+        /* VERY SMALL PHONES (380px and below) */
+        @media (max-width: 380px) {
+            .header h1 { font-size: 1rem; }
+            .header .logo-icon { font-size: 1.5rem; }
+            .header .subtitle { font-size: 0.65rem; }
+            
+            .top-nav .nav-left .brand { font-size: 0.75rem; }
+            .top-nav .nav-links a { font-size: 0.75rem; padding: 6px 12px; }
+            
+            .stat-card .stat-number { font-size: 0.95rem; }
+            .stat-card .stat-label { font-size: 0.55rem; }
+            
+            .menu-card { padding: 12px 10px; }
+            .menu-card h3 { font-size: 0.85rem; }
+            .menu-card p { font-size: 0.7rem; }
+            .menu-card .card-icon-wrapper { width: 32px; height: 32px; font-size: 1.1rem; }
+        }
+
+        /* ===== SCROLLBAR ===== */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #bdc3c7;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #95a5a6;
         }
     </style>
 </head>
 <body>
-    <!-- Header -->
-    <div class="header">
-        <div class="container">
-            <div class="row">
-                <div class="col-12 text-center">
-                    <h1><i class="bi bi-tree"></i> Agriculture Management System</h1>
-                    <p><i class="bi bi-clock"></i> कृषि प्रबंधन प्रणाली</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Flash Messages -->
-    <div class="flash-messages">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                        <i class="bi bi-{% if category == 'success' %}check-circle{% elif category == 'danger' %}x-circle{% else %}info-circle{% endif %} me-2"></i>
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-    </div>
 
     <div class="container">
-        <div class="row g-4">
-            <!-- Diesel Purchase Card -->
-            <div class="col-md-4">
-                <a href="{{ url_for('diesel_index') }}" class="dashboard-card diesel">
-                    <div class="icon"><i class="bi bi-fuel-pump"></i></div>
-                    <h3>Diesel Purchase</h3>
-                    <p class="description">Track all diesel purchases, rates, and bills</p>
-                    <div class="stats">
-                        <div class="stat-item">
-                            <div class="number">{{ diesel_summary.total_entries|default(0) if diesel_summary else 0 }}</div>
-                            <div class="label">Entries</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="number">₹{{ "%.2f"|format(diesel_summary.total_amount|default(0) if diesel_summary else 0) }}</div>
-                            <div class="label">Total Spent</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="number">{{ "%.2f"|format(diesel_summary.total_liters|default(0) if diesel_summary else 0) }}</div>
-                            <div class="label">Liters</div>
-                        </div>
-                    </div>
-                    <div class="arrow"><i class="bi bi-chevron-right"></i></div>
-                </a>
-            </div>
 
-            <!-- Daily Tractor Card -->
-            <div class="col-md-4">
-                <a href="{{ url_for('daily_tractor_form') }}" class="dashboard-card tractor">
-                    <div class="icon"><i class="bi bi-tractor"></i></div>
-                    <h3>Daily Tractor</h3>
-                    <p class="description">Track daily tractor usage, time, and payments</p>
-                    <div class="stats">
-                        <div class="stat-item">
-                            <div class="number">{{ tractor_summary.total_entries|default(0) if tractor_summary else 0 }}</div>
-                            <div class="label">Entries</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="number">₹{{ "%.2f"|format(tractor_summary.total_amount|default(0) if tractor_summary else 0) }}</div>
-                            <div class="label">Total Amount</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="number">₹{{ "%.2f"|format(tractor_summary.total_balance|default(0) if tractor_summary else 0) }}</div>
-                            <div class="label">Balance</div>
-                        </div>
+        <!-- ===== HEADER + NAVIGATION ===== -->
+        <div class="header-nav-wrapper">
+            
+            <header class="header">
+                <div class="header-content">
+                    <span class="logo-icon">🚜</span>
+                    <h1>Agriculture Management System</h1>
+                    <p class="subtitle">📊 Unified Dashboard for Tractor &amp; Diesel Operations</p>
+                    <div class="date-time">
+                        <span class="status-dot"></span>
+                        <span id="currentDateTime">
+                            {% if now %}
+                                {{ now.strftime('%A, %d %B %Y at %I:%M %p') }}
+                            {% else %}
+                                Loading...
+                            {% endif %}
+                        </span>
                     </div>
-                    <div class="arrow"><i class="bi bi-chevron-right"></i></div>
-                </a>
-            </div>
+                </div>
+            </header>
 
-            <!-- Tractor Operation Card -->
-            <div class="col-md-4">
-                <a href="{{ url_for('tractor_operation_form') }}" class="dashboard-card operation">
-                    <div class="icon"><i class="bi bi-gear"></i></div>
-                    <h3>Tractor Operations</h3>
-                    <p class="description">Manage tractor operations, crops, and batayidar</p>
-                    <div class="stats">
-                        <div class="stat-item">
-                            <div class="number">{{ operation_summary.total_entries|default(0) if operation_summary else 0 }}</div>
-                            <div class="label">Entries</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="number">₹{{ "%.2f"|format(operation_summary.total_amount|default(0) if operation_summary else 0) }}</div>
-                            <div class="label">Total Amount</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="number">{{ operation_summary.total_crops|default(0) if operation_summary else 0 }}</div>
-                            <div class="label">Crops</div>
-                        </div>
+            <nav class="top-nav">
+                <div class="nav-left">
+                    <div class="brand">
+                        <i class="fas fa-tractor"></i>
+                        Agri<span>System</span>
                     </div>
-                    <div class="arrow"><i class="bi bi-chevron-right"></i></div>
-                </a>
+                    <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                </div>
+
+                <div class="nav-links" id="navLinks">
+                    <a href="{{ url_for('index') }}" class="active">
+                        <i class="fas fa-home"></i> Home
+                    </a>
+                    <a href="{{ url_for('add_purchase_route') }}">
+                        <i class="fas fa-gas-pump"></i> Diesel
+                    </a>
+                    <a href="{{ url_for('daily_tractor_form') }}">
+                        <i class="fas fa-tractor"></i> Tractor
+                    </a>
+                    <a href="{{ url_for('tractor_operation_form') }}">
+                        <i class="fas fa-tasks"></i> Operations
+                    </a>
+                    <a href="{{ url_for('daily_tractor_report') }}">
+                        <i class="fas fa-file-alt"></i> Reports
+                    </a>
+                </div>
+
+                <div class="nav-right">
+                    <span class="upi-badge">
+                        <i class="fas fa-qrcode"></i>
+                        <span>UPI: {{ upi_id if upi_id else 'nimeshab@ybl' }}</span>
+                    </span>
+                    <span class="date-badge">
+                        <i class="far fa-calendar-alt"></i>
+                        {% if now %}{{ now.strftime('%d %b %Y') }}{% endif %}
+                    </span>
+                </div>
+            </nav>
+        </div>
+
+        <!-- ===== STATISTICS ===== -->
+        <div class="stats-grid">
+            <div class="stat-card blue animated fade-in-up delay-1">
+                <span class="stat-icon">⛽</span>
+                <div class="stat-number">{{ "%.2f"|format(diesel_stats.total_liters) if diesel_stats else "0" }}</div>
+                <div class="stat-label">Total Diesel (Liters)</div>
+                <span class="stat-change up">↑ 12%</span>
+            </div>
+            <div class="stat-card green animated fade-in-up delay-2">
+                <span class="stat-icon">💰</span>
+                <div class="stat-number"><span class="currency">₹</span>{{ "%.2f"|format(diesel_stats.total_amount) if diesel_stats else "0" }}</div>
+                <div class="stat-label">Diesel Spend</div>
+                <span class="stat-change up">↑ 8%</span>
+            </div>
+            <div class="stat-card orange animated fade-in-up delay-3">
+                <span class="stat-icon">🚜</span>
+                <div class="stat-number">{{ tractor_stats.total_entries if tractor_stats else 0 }}</div>
+                <div class="stat-label">Tractor Records</div>
+                <span class="stat-change neutral">• Stable</span>
+            </div>
+            <div class="stat-card red animated fade-in-up delay-4">
+                <span class="stat-icon">📋</span>
+                <div class="stat-number"><span class="currency">₹</span>{{ "%.2f"|format(tractor_stats.balance_amount) if tractor_stats else "0" }}</div>
+                <div class="stat-label">Outstanding Balance</div>
+                <span class="stat-change down">↓ Needs Attention</span>
+            </div>
+            <div class="stat-card purple animated fade-in-up delay-5">
+                <span class="stat-icon">🌾</span>
+                <div class="stat-number">{{ operation_stats.total_entries if operation_stats else 0 }}</div>
+                <div class="stat-label">Operations</div>
+                <span class="stat-change up">↑ 5%</span>
+            </div>
+            <div class="stat-card teal animated fade-in-up delay-6">
+                <span class="stat-icon">🏷️</span>
+                <div class="stat-number">{{ operation_stats.total_crops if operation_stats else 0 }}</div>
+                <div class="stat-label">Crops</div>
+                <span class="stat-change neutral">• Active</span>
             </div>
         </div>
 
-        <!-- Footer -->
-        <div class="text-center mt-5 pt-4 border-top">
-            <p class="text-muted">
-                <i class="bi bi-tree"></i> Agriculture Management System v2.0 
-                <span class="mx-2">|</span> 
-                <i class="bi bi-calendar"></i> 2024
-            </p>
+        <!-- ===== MAIN MENU ===== -->
+        <div class="menu-grid">
+            <a href="{{ url_for('add_purchase_route') }}" class="menu-card animated slide-in-left delay-1">
+                <div class="card-icon-wrapper icon-bg-blue">⛽</div>
+                <h3>Diesel Purchase</h3>
+                <p>Add new diesel purchase, track fuel consumption, and upload bill images.</p>
+                <div class="card-footer">
+                    <span class="badge badge-blue">{{ diesel_stats.total_entries if diesel_stats else 0 }} entries</span>
+                    <span class="arrow">→</span>
+                </div>
+            </a>
+
+            <a href="{{ url_for('daily_tractor_form') }}" class="menu-card animated slide-in-left delay-2">
+                <div class="card-icon-wrapper icon-bg-green">🚜</div>
+                <h3>Daily Tractor Entry</h3>
+                <p>Add new tractor records, manage farmer details, and track daily operations.</p>
+                <div class="card-footer">
+                    <span class="badge badge-green">Add New</span>
+                    <span class="arrow">→</span>
+                </div>
+                {% if tractor_stats.get('unpaid_count', 0) > 0 %}
+                <span class="hot-badge">{{ tractor_stats.get('unpaid_count', 0) }} Unpaid</span>
+                {% endif %}
+            </a>
+
+            <a href="{{ url_for('tractor_operation_form') }}" class="menu-card animated slide-in-left delay-3">
+                <div class="card-icon-wrapper icon-bg-orange">🌾</div>
+                <h3>Tractor Operations</h3>
+                <p>Manage crop operations, batayidar records, and operation history.</p>
+                <div class="card-footer">
+                    <span class="badge badge-orange">{{ operation_stats.total_entries if operation_stats else 0 }} operations</span>
+                    <span class="arrow">→</span>
+                </div>
+            </a>
+
+            <a href="{{ url_for('daily_tractor_report') }}" class="menu-card animated slide-in-left delay-4">
+                <div class="card-icon-wrapper icon-bg-purple">📊</div>
+                <h3>📋 Daily Tractor Report</h3>
+                <p>Generate full statements, unpaid records, payment history, and export PDFs.</p>
+                <div class="card-footer">
+                    <span class="badge badge-purple">PDF &amp; Print</span>
+                    <span class="arrow">→</span>
+                </div>
+            </a>
         </div>
+
+        <!-- ===== FOOTER ===== -->
+        <footer class="footer">
+            <div class="version-info">
+                Version 2.1 &bull; Built with ❤️ using Flask &amp; PostgreSQL
+                &bull; All data is stored securely
+            </div>
+        </footer>
+
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        (function() {
-            setTimeout(function() {
-                var alerts = document.querySelectorAll('.alert');
-                for (var i = 0; i < alerts.length; i++) {
-                    (function(alert) {
-                        setTimeout(function() {
-                            alert.classList.remove('show');
-                            setTimeout(function() {
-                                alert.remove();
-                            }, 300);
-                        }, 5000);
-                    })(alerts[i]);
-                }
-            }, 1000);
-        })();
+        // ===== MOBILE NAV TOGGLE =====
+        document.getElementById('navToggle').addEventListener('click', function() {
+            document.getElementById('navLinks').classList.toggle('open');
+        });
+
+        document.addEventListener('click', function(event) {
+            const nav = document.getElementById('navLinks');
+            const toggle = document.getElementById('navToggle');
+            if (!nav.contains(event.target) && !toggle.contains(event.target)) {
+                nav.classList.remove('open');
+            }
+        });
+
+        // ===== UPDATE DATE/TIME =====
+        function updateDateTime() {
+            const now = new Date();
+            const options = {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            };
+            const el = document.getElementById('currentDateTime');
+            if (el) {
+                el.textContent = now.toLocaleString('en-IN', options);
+            }
+        }
+        updateDateTime();
+        setInterval(updateDateTime, 1000);
+
+        // ===== HIGHLIGHT CURRENT PAGE =====
+        document.querySelectorAll('.nav-links a').forEach(link => {
+            if (link.href === window.location.href) {
+                link.classList.add('active');
+            } else {
+                link.classList.remove('active');
+            }
+        });
+
+        // ===== KEYBOARD SHORTCUTS =====
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'd') {
+                e.preventDefault();
+                window.location.href = "{{ url_for('add_purchase_route') }}";
+            }
+            if (e.ctrlKey && e.key === 'n') {
+                e.preventDefault();
+                window.location.href = "{{ url_for('daily_tractor_form') }}";
+            }
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                window.location.href = "{{ url_for('daily_tractor_report') }}";
+            }
+            if (e.ctrlKey && e.key === 'u') {
+                e.preventDefault();
+                window.location.href = "{{ url_for('daily_tractor_report') }}";
+            }
+            if (e.ctrlKey && e.key === 'p') {
+                e.preventDefault();
+                window.print();
+            }
+            if (e.ctrlKey && e.key === 'r') {
+                e.preventDefault();
+                location.reload();
+            }
+        });
+
+        console.log('%c🚜 Agriculture Management System', 'font-size: 20px; font-weight: bold; color: #2c3e50;');
+        console.log('%c📊 Dashboard loaded successfully!', 'font-size: 14px; color: #27ae60;');
+        console.log('%c💳 UPI: nimeshab@ybl', 'font-size: 14px; color: #8e44ad;');
+        console.log('%c⌨️ Ctrl+D (Diesel) | Ctrl+N (New) | Ctrl+S (Statement) | Ctrl+U (Unpaid) | Ctrl+P (Print)', 'font-size: 12px; color: #7f8c8d;');
     </script>
+
 </body>
 </html>

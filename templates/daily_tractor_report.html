@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📋 Daily Tractor Report</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background: #f0f2f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .main-container { max-width: 1400px; margin: 20px auto; padding: 20px; }
+        .header-card { background: linear-gradient(135deg, #2c3e50, #3498db); color: white; padding: 25px; border-radius: 15px; margin-bottom: 20px; }
+        .header-card h1 { margin: 0; font-size: 2rem; }
+        .header-card h1 span { color: #f1c40f; }
+        .card { border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); margin-bottom: 20px; border: none; }
+        .badge-paid { background: #27ae60; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; }
+        .badge-unpaid { background: #e74c3c; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; }
+        .payment-modal .modal-content { border-radius: 16px; border: none; }
+        .payment-modal .modal-header { background: linear-gradient(135deg, #2c3e50, #3498db); color: white; border-radius: 16px 16px 0 0; }
+        .payment-modal .modal-header .btn-close { filter: brightness(0) invert(1); }
+        .table th { background: #f8f9fa; border-bottom: 2px solid #dee2e6; font-weight: 600; font-size: 0.8rem; white-space: nowrap; }
+        .table td { font-size: 0.8rem; white-space: nowrap; }
+        .table-container { overflow-x: auto; }
+        .btn-cash-payment { background: #27ae60; color: white; border: none; padding: 12px 30px; font-size: 18px; }
+        .btn-cash-payment:hover { background: #2ecc71; color: white; }
+        .btn-upi-payment { background: #6c5ce7; color: white; border: none; padding: 12px 30px; font-size: 18px; }
+        .btn-upi-payment:hover { background: #5f3dc4; color: white; }
+        .btn-download-pdf { background: #e74c3c; color: white; border: none; padding: 8px 20px; border-radius: 5px; }
+        .btn-download-pdf:hover { background: #c0392b; color: white; }
+        .stat-card { transition: transform 0.2s; }
+        .stat-card:hover { transform: translateY(-3px); }
+        .stat-value { font-size: 28px; font-weight: bold; }
+        .stat-label { font-size: 12px; text-transform: uppercase; color: #7f8c8d; }
+        .table-responsive { max-height: 500px; overflow-y: auto; }
+        .table thead { position: sticky; top: 0; z-index: 10; }
+        .payment-method-btn { padding: 15px; border-radius: 12px; border: 2px solid #dee2e6; background: white; cursor: pointer; text-align: center; transition: all 0.3s; }
+        .payment-method-btn:hover { border-color: #6c5ce7; background: #f8f0ff; }
+        .payment-method-btn.active { border-color: #6c5ce7; background: #f0ebff; }
+        .payment-method-btn i { font-size: 24px; display: block; margin-bottom: 8px; }
+        .copy-btn { cursor: pointer; color: #6c5ce7; }
+        .copy-btn:hover { color: #5f3dc4; }
+        .upi-details-box { background: #f8f9fa; padding: 20px; border-radius: 12px; border: 2px solid #6c5ce7; text-align: center; }
+        .upi-details-box .upi-id { font-size: 24px; font-weight: bold; color: #2c3e50; }
+        .upi-details-box .upi-label { font-size: 14px; color: #7f8c8d; }
+        .upi-details-box .upi-amount { font-size: 20px; color: #6c5ce7; font-weight: bold; }
+        .btn-confirm-payment { background: #27ae60; color: white; border: none; padding: 12px 30px; font-size: 18px; width: 100%; }
+        .btn-confirm-payment:hover { background: #2ecc71; color: white; }
+        .phone-cell { font-family: monospace; font-weight: bold; }
+        .no-records { text-align: center; padding: 40px; }
+        .no-records i { font-size: 48px; color: #bdc3c7; }
+        .no-records h5 { color: #7f8c8d; margin-top: 15px; }
+        .back-btn { background: #6c757d; color: white; border: none; padding: 8px 20px; border-radius: 5px; }
+        .back-btn:hover { background: #5a6268; color: white; }
+    </style>
+</head>
+<body>
+    <div id="appData" 
+         data-upi-id="{{ UPI_ID }}"
+         data-upi-name="{{ UPI_NAME }}"
+         data-upi-merchant="{{ UPI_MERCHANT }}"
+         data-selected-farmer="{{ selected_farmer }}"
+         data-unpaid-balance="{{ balance_amount }}"
+         data-show-full="{{ 'true' if show_full else 'false' }}"
+         data-total-amount="{{ total_amount }}"
+         data-total-records="{{ rows|length }}"
+         data-paid-records="{{ paid_records|default(0) }}"
+         data-unpaid-records="{{ unpaid_records|default(0) }}">
+    </div>
+
+    <div class="main-container">
+        <div class="header-card">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h1><i class="fas fa-tractor"></i> Daily Tractor <span>Report</span></h1>
+                    <div class="small">View records, payments & generate reports</div>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <span class="badge bg-light text-dark p-2">
+                        <i class="fas fa-calendar-alt"></i> 
+                        {{ current_datetime.strftime('%d %B %Y %I:%M %p') if current_datetime else '' }}
+                    </span>
+                    <span class="badge bg-success p-2 ms-2"><i class="fas fa-money-bill"></i> Cash</span>
+                    <span class="badge bg-primary p-2 ms-2"><i class="fas fa-qrcode"></i> UPI</span>
+                    <a href="{{ url_for('index') }}" class="btn btn-light btn-sm ms-2">
+                        <i class="fas fa-home"></i> Home
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Filter Bar -->
+        <div class="card">
+            <div class="card-body">
+                <form method="get" action="{{ url_for('daily_tractor_report') }}" class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label"><i class="fas fa-user"></i> Select Farmer</label>
+                        <select name="farmer_name" class="form-select" onchange="this.form.submit()">
+                            <option value="">-- All Farmers --</option>
+                            {% for name in farmer_names %}
+                                <option value="{{ name }}" {% if selected_farmer == name %}selected{% endif %}>
+                                    {{ name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label"><i class="fas fa-eye"></i> View</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="show_full_statement" value="false" 
+                                   id="unpaidOnly" {% if not show_full %}checked{% endif %} onchange="this.form.submit()">
+                            <label class="form-check-label" for="unpaidOnly">Unpaid Only</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="show_full_statement" value="true" 
+                                   id="fullStatement" {% if show_full %}checked{% endif %} onchange="this.form.submit()">
+                            <label class="form-check-label" for="fullStatement">Full Statement</label>
+                        </div>
+                    </div>
+                    <div class="col-md-5 text-end">
+                        {% if selected_farmer %}
+                            <button type="button" class="btn btn-success" onclick="openPaymentModal('cash')">
+                                <i class="fas fa-money-bill"></i> Cash
+                            </button>
+                            <button type="button" class="btn btn-primary" onclick="openPaymentModal('upi')">
+                                <i class="fas fa-qrcode"></i> UPI
+                            </button>
+                            <button type="button" class="btn btn-danger" onclick="downloadReportPDF()">
+                                <i class="fas fa-file-pdf"></i> Full Report
+                            </button>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        {% if selected_farmer %}
+        <!-- Statistics -->
+        <div class="row g-3 mb-3">
+            <div class="col-md-3">
+                <div class="card stat-card"><div class="card-body text-center">
+                    <div class="stat-label"><i class="fas fa-list"></i> Records</div>
+                    <div class="stat-value">{{ rows|length }}</div>
+                    <small><span class="text-success">{{ paid_records|default(0) }} Paid</span> | <span class="text-danger">{{ unpaid_records|default(0) }} Unpaid</span></small>
+                </div></div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card"><div class="card-body text-center">
+                    <div class="stat-label"><i class="fas fa-rupee-sign"></i> Total Amount</div>
+                    <div class="stat-value text-success">₹{{ "%.2f"|format(total_amount|float) }}</div>
+                </div></div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card"><div class="card-body text-center">
+                    <div class="stat-label"><i class="fas fa-hand-holding-usd"></i> Total Advance</div>
+                    <div class="stat-value text-primary">₹{{ "%.2f"|format(advance_amount|float) }}</div>
+                </div></div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card"><div class="card-body text-center">
+                    <div class="stat-label"><i class="fas fa-exclamation-triangle"></i> Balance</div>
+                    <div class="stat-value text-danger">₹{{ "%.2f"|format(balance_amount|float) }}</div>
+                </div></div>
+            </div>
+        </div>
+        
+        <!-- UPI Payment Section -->
+        {% if balance_amount > 0 %}
+        <div class="card border-primary">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <div class="d-flex align-items-center gap-4 flex-wrap">
+                            <div>
+                                <span class="text-muted small">Pay via UPI</span>
+                                <h5 class="mb-0 text-primary">{{ UPI_ID }}</h5>
+                            </div>
+                            <div>
+                                <span class="text-muted small">Payee</span>
+                                <h6 class="mb-0">{{ UPI_NAME }}</h6>
+                            </div>
+                            <div>
+                                <span class="text-muted small">Amount</span>
+                                <h5 class="mb-0 text-danger">₹{{ "%.2f"|format(balance_amount|float) }}</h5>
+                            </div>
+                            <button class="btn btn-outline-primary" onclick="copyUPI()">
+                                <i class="fas fa-copy"></i> Copy UPI
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <button class="btn btn-success btn-lg" onclick="openPaymentModal('cash')">
+                            <i class="fas fa-money-bill"></i> Pay Now
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Records Table -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="fas fa-list"></i> 
+                    {% if show_full %}Full Statement{% else %}Unpaid Records{% endif %}
+                    <span class="badge bg-secondary ms-2">{{ rows|length }}</span>
+                </div>
+                <div>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="window.print()">
+                        <i class="fas fa-print"></i> Print
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="downloadReportPDF()">
+                        <i class="fas fa-file-pdf"></i> PDF
+                    </button>
+                </div>
+            </div>
+            <div class="card-body table-container">
+                {% if rows %}
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Date</th>
+                                    <th>Farmer</th>
+                                    <th>Phone</th>
+                                    <th>Start</th>
+                                    <th>Stop</th>
+                                    <th>Time</th>
+                                    <th>Rate</th>
+                                    <th>Amount</th>
+                                    <th>Advance</th>
+                                    <th>Balance</th>
+                                    <th>Reason</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in rows %}
+                                    <tr>
+                                        <td>{{ loop.index }}</td>
+                                        <td>{{ row.s_date.strftime('%d-%m-%Y') if row.s_date else '' }}</td>
+                                        <td><strong>{{ row.iname }}</strong></td>
+                                        <td class="phone-cell">{{ row.phone|default('-') }}</td>
+                                        <td>{{ row.start_time.strftime('%H:%M') if row.start_time else '' }}</td>
+                                        <td>{{ row.stop_time.strftime('%H:%M') if row.stop_time else '' }}</td>
+                                        <td>{{ row.duration|default('0h 0m') }}</td>
+                                        <td>₹{{ "%.2f"|format(row.rate|float) }}</td>
+                                        <td>₹{{ "%.2f"|format(row.amount|float) }}</td>
+                                        <td>₹{{ "%.2f"|format(row.advance_amount|float) }}</td>
+                                        <td>₹{{ "%.2f"|format(row.balance_amount|float) }}</td>
+                                        <td>{{ row.reason_label|default(row.reason) }}</td>
+                                        <td>
+                                            {% if row.paid %}
+                                                <span class="badge-paid"><i class="fas fa-check"></i> PAID</span>
+                                            {% else %}
+                                                <span class="badge-unpaid"><i class="fas fa-times"></i> UNPAID</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="no-records">
+                        <i class="fas fa-inbox"></i>
+                        <h5>No records found</h5>
+                        <p class="text-muted">No records available for the selected filters.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
+            <div class="card"><div class="card-body text-center py-5">
+                <i class="fas fa-hand-pointer fa-4x text-muted"></i>
+                <h4 class="mt-3">Select a farmer to view records</h4>
+                <p class="text-muted">Choose a farmer from the dropdown above to see their records.</p>
+            </div></div>
+        {% endif %}
+    </div>
+    
+    <!-- Payment Modal -->
+    <div class="modal fade payment-modal" id="paymentModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-rupee-sign"></i> Make Payment</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="step1">
+                        <h6>Farmer: <strong id="farmerName">{{ selected_farmer }}</strong></h6>
+                        
+                        <div class="row g-3 mb-4">
+                            <div class="col-6">
+                                <div class="payment-method-btn active" id="cashBtn" onclick="selectPaymentMethod('cash')">
+                                    <i class="fas fa-money-bill text-success"></i>
+                                    <strong>Cash</strong>
+                                    <small class="d-block text-muted">Instant confirmation</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="payment-method-btn" id="upiBtn" onclick="selectPaymentMethod('upi')">
+                                    <i class="fas fa-qrcode text-primary"></i>
+                                    <strong>UPI</strong>
+                                    <small class="d-block text-muted">Pay using UPI</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Unpaid Balance</label>
+                                    <h4 class="text-danger" id="modalBalance">₹{{ "%.2f"|format(balance_amount|float) }}</h4>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Amount to Pay</label>
+                                    <input type="number" class="form-control" id="paymentAmount" 
+                                           value="{{ "%.2f"|format(balance_amount|float) }}" step="0.01">
+                                </div>
+                                <div class="mb-3">
+                                    <input type="text" class="form-control" id="paymentNotes" placeholder="Notes (optional)">
+                                </div>
+                                
+                                <button class="btn btn-cash-payment w-100" id="cashSubmit" onclick="submitCashPayment()">
+                                    <i class="fas fa-check"></i> Confirm Cash Payment
+                                </button>
+                                <button class="btn btn-upi-payment w-100" id="upiSubmit" onclick="confirmUPIPayment()" style="display:none;">
+                                    <i class="fas fa-check"></i> Confirm UPI Payment
+                                </button>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div id="cashInfo" class="border rounded p-4 text-center">
+                                    <i class="fas fa-money-bill fa-4x text-success"></i>
+                                    <p class="text-muted mt-2">Cash Payment</p>
+                                    <p class="text-success small">✅ Instant Confirmation</p>
+                                </div>
+                                
+                                <div id="upiInfo" style="display:none;">
+                                    <div class="upi-details-box">
+                                        <div class="upi-label">Pay using any UPI App</div>
+                                        <div class="upi-id mt-2">
+                                            <span id="upiIdDisplay">{{ UPI_ID }}</span>
+                                            <i class="fas fa-copy copy-btn ms-2" onclick="copyUPI()" title="Copy UPI ID"></i>
+                                        </div>
+                                        <div class="upi-label mt-3">Amount</div>
+                                        <div class="upi-amount" id="upiAmountDisplay">₹{{ "%.2f"|format(balance_amount|float) }}</div>
+                                        <div class="upi-label mt-3">Merchant</div>
+                                        <div style="font-weight: bold; color: #2c3e50;">{{ UPI_MERCHANT }}</div>
+                                        <hr>
+                                        <div class="text-muted small">
+                                            <i class="fas fa-info-circle"></i> Pay using any UPI app (Google Pay, PhonePe, Paytm, etc.)
+                                        </div>
+                                        <div class="mt-3">
+                                            <button class="btn btn-confirm-payment" onclick="confirmUPIPayment()">
+                                                <i class="fas fa-check"></i> Confirm UPI Payment
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="step2" style="display:none;">
+                        <div class="text-center py-3">
+                            <div class="spinner-border text-primary" style="width:3rem;height:3rem;"></div>
+                            <h5 class="mt-3" id="processingTitle">Processing...</h5>
+                            <div id="statusMsg" class="mt-3"></div>
+                            <button class="btn btn-secondary mt-3" onclick="closeModal()">Close</button>
+                        </div>
+                    </div>
+                    
+                    <div id="step3" style="display:none;">
+                        <div class="text-center py-3">
+                            <i class="fas fa-check-circle fa-4x text-success"></i>
+                            <h5 class="mt-3">✅ Payment Successful!</h5>
+                            <div id="resultMsg"></div>
+                            <div class="mt-3">
+                                <button class="btn btn-primary" onclick="downloadAdvice()">
+                                    <i class="fas fa-file-pdf"></i> Download Receipt
+                                </button>
+                                <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    var CONFIG = {
+        selectedFarmer: '{{ selected_farmer }}',
+        unpaidBalance: parseFloat('{{ balance_amount }}') || 0,
+        upiId: '{{ UPI_ID }}',
+        upiMerchant: '{{ UPI_MERCHANT }}'
+    };
+    
+    var paymentModal = null;
+    var currentConfirmation = null;
+    var selectedPaymentMethod = 'cash';
+    var currentTransactionId = '';
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        paymentModal = new bootstrap.Modal(document.getElementById('paymentModal'));
+        var amountInput = document.getElementById('paymentAmount');
+        if (amountInput) {
+            amountInput.addEventListener('input', function() {
+                updateUPIAmount();
+            });
+        }
+    });
+    
+    function selectPaymentMethod(method) {
+        selectedPaymentMethod = method;
+        
+        document.getElementById('cashBtn').classList.remove('active');
+        document.getElementById('upiBtn').classList.remove('active');
+        
+        if (method === 'cash') {
+            document.getElementById('cashBtn').classList.add('active');
+            document.getElementById('cashSubmit').style.display = 'block';
+            document.getElementById('upiSubmit').style.display = 'none';
+            document.getElementById('cashInfo').style.display = 'block';
+            document.getElementById('upiInfo').style.display = 'none';
+        } else {
+            document.getElementById('upiBtn').classList.add('active');
+            document.getElementById('cashSubmit').style.display = 'none';
+            document.getElementById('upiSubmit').style.display = 'block';
+            document.getElementById('cashInfo').style.display = 'none';
+            document.getElementById('upiInfo').style.display = 'block';
+            updateUPIAmount();
+        }
+    }
+    
+    function updateUPIAmount() {
+        var amount = parseFloat(document.getElementById('paymentAmount').value) || 0;
+        document.getElementById('upiAmountDisplay').textContent = '₹' + amount.toFixed(2);
+    }
+    
+    function openPaymentModal(method) {
+        if (CONFIG.unpaidBalance <= 0) {
+            alert('No unpaid balance for this farmer');
+            return;
+        }
+        
+        document.getElementById('paymentAmount').value = CONFIG.unpaidBalance.toFixed(2);
+        document.getElementById('step1').style.display = 'block';
+        document.getElementById('step2').style.display = 'none';
+        document.getElementById('step3').style.display = 'none';
+        
+        if (method === 'upi') {
+            selectPaymentMethod('upi');
+        } else {
+            selectPaymentMethod('cash');
+        }
+        
+        paymentModal.show();
+    }
+    
+    function closeModal() {
+        paymentModal.hide();
+        location.reload();
+    }
+    
+    function copyUPI() {
+        var upiId = document.getElementById('upiIdDisplay').textContent;
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(upiId).then(function() {
+                var btn = document.querySelector('.copy-btn');
+                btn.className = 'fas fa-check copy-btn ms-2 text-success';
+                setTimeout(function() {
+                    btn.className = 'fas fa-copy copy-btn ms-2';
+                }, 2000);
+            });
+        } else {
+            var textArea = document.createElement('textarea');
+            textArea.value = upiId;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            alert('UPI ID copied to clipboard!');
+        }
+    }
+    
+    async function submitCashPayment() {
+        var farmer = CONFIG.selectedFarmer;
+        var amount = parseFloat(document.getElementById('paymentAmount').value);
+        var notes = document.getElementById('paymentNotes').value;
+        
+        if (!farmer || !amount || amount <= 0) {
+            alert('Please enter valid amount');
+            return;
+        }
+        
+        document.getElementById('step1').style.display = 'none';
+        document.getElementById('step2').style.display = 'block';
+        document.getElementById('processingTitle').textContent = 'Processing Cash Payment...';
+        document.getElementById('statusMsg').innerHTML = '<div class="spinner-border text-primary"></div><p class="mt-2">Processing cash payment...</p>';
+        
+        try {
+            var response = await fetch('/submit_cash_payment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    farmer_name: farmer,
+                    payment_amount: amount,
+                    payment_notes: notes
+                })
+            });
+            
+            var data = await response.json();
+            
+            if (data.success) {
+                currentConfirmation = data.confirmation_no;
+                document.getElementById('step2').style.display = 'none';
+                document.getElementById('step3').style.display = 'block';
+                document.getElementById('resultMsg').innerHTML = 
+                    '<div class="alert alert-success">' +
+                    '✅ Cash Payment Successful!<br>' +
+                    'Records Updated: ' + data.processed_records +
+                    '</div>';
+            } else {
+                document.getElementById('statusMsg').innerHTML = 
+                    '<div class="alert alert-danger">' + (data.error || 'Payment failed') + '</div>';
+            }
+        } catch (e) {
+            document.getElementById('statusMsg').innerHTML = 
+                '<div class="alert alert-danger">Error: ' + e.message + '</div>';
+        }
+    }
+    
+    async function confirmUPIPayment() {
+        var farmer = CONFIG.selectedFarmer;
+        var amount = parseFloat(document.getElementById('paymentAmount').value);
+        var notes = document.getElementById('paymentNotes').value;
+        
+        if (!farmer || !amount || amount <= 0) {
+            alert('Please enter valid amount');
+            return;
+        }
+        
+        document.getElementById('step1').style.display = 'none';
+        document.getElementById('step2').style.display = 'block';
+        document.getElementById('processingTitle').textContent = 'Verifying UPI Payment...';
+        document.getElementById('statusMsg').innerHTML = '<div class="spinner-border text-primary"></div><p class="mt-2">Verifying your payment...</p>';
+        
+        try {
+            var now = new Date();
+            currentTransactionId = 'UPI_' + now.getFullYear() + 
+                String(now.getMonth()+1).padStart(2,'0') + 
+                String(now.getDate()).padStart(2,'0') + 
+                String(now.getHours()).padStart(2,'0') + 
+                String(now.getMinutes()).padStart(2,'0') + 
+                String(now.getSeconds()).padStart(2,'0') + 
+                '_' + Math.floor(Math.random() * 900 + 100);
+            
+            var response = await fetch('/submit_upi_payment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    farmer_name: farmer,
+                    payment_amount: amount,
+                    payment_notes: notes,
+                    transaction_id: currentTransactionId
+                })
+            });
+            
+            var data = await response.json();
+            
+            if (data.success) {
+                currentConfirmation = data.confirmation_no;
+                document.getElementById('step2').style.display = 'none';
+                document.getElementById('step3').style.display = 'block';
+                document.getElementById('resultMsg').innerHTML = 
+                    '<div class="alert alert-success">' +
+                    '✅ UPI Payment Verified!<br>' +
+                    'Records Updated: ' + data.processed_records +
+                    '</div>';
+            } else {
+                document.getElementById('statusMsg').innerHTML = 
+                    '<div class="alert alert-danger">' + (data.error || 'Payment verification failed') + '</div>';
+            }
+        } catch (e) {
+            console.error('Error:', e);
+            document.getElementById('statusMsg').innerHTML = 
+                '<div class="alert alert-danger">Error: ' + e.message + '</div>';
+        }
+    }
+    
+    function downloadAdvice() {
+        if (currentConfirmation) {
+            window.open('/generate_payment_advice?confirmation_no=' + currentConfirmation, '_blank');
+            setTimeout(function() { 
+                closeModal(); 
+            }, 2000);
+        }
+    }
+    
+    function downloadReportPDF() {
+        var farmer = CONFIG.selectedFarmer;
+        if (farmer) {
+            var showFull = document.querySelector('input[name="show_full_statement"]:checked').value;
+            var url = '/download_tractor_report_pdf?farmer_name=' + encodeURIComponent(farmer) + 
+                     '&full_statement=' + showFull;
+            window.open(url, '_blank');
+        }
+    }
+    </script>
+</body>
+</html>

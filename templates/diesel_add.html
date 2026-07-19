@@ -3,390 +3,360 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% if edit_mode %}Edit{% else %}Add{% endif %} Diesel Purchase</title>
+    <title>{% if edit_mode %}Edit{% else %}Add New{% endif %} Diesel Purchase</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        * {
-            font-family: 'Noto Sans Devanagari', 'Mangal', sans-serif !important;
-        }
+        body { background: #f0f2f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .main-container { max-width: 1200px; margin: 20px auto; padding: 20px; }
+        .header-card { background: linear-gradient(135deg, #2c3e50, #3498db); color: white; padding: 25px; border-radius: 15px; margin-bottom: 20px; }
+        .header-card h1 { margin: 0; font-size: 2rem; }
+        .card { border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); border: none; }
+        .form-control, .form-select { border-radius: 8px; border: 2px solid #e0e0e0; padding: 8px 12px; font-size: 0.95rem; }
+        .form-control:focus, .form-select:focus { border-color: #3498db; box-shadow: 0 0 0 0.2rem rgba(52,152,219,0.15); }
+        .btn-submit { background: linear-gradient(135deg, #27ae60, #2ecc71); color: white; padding: 10px 30px; font-size: 1rem; border: none; border-radius: 8px; font-weight: 600; flex: 1; height: 48px; display: flex; align-items: center; justify-content: center; }
+        .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(39,174,96,0.4); }
+        .btn-cancel { background: #95a5a6; color: white; padding: 10px 25px; font-size: 1rem; border: none; border-radius: 8px; font-weight: 600; flex: 1; height: 48px; display: flex; align-items: center; justify-content: center; }
+        .btn-cancel:hover { background: #7f8c8d; transform: translateY(-2px); }
+        .btn-back { background: #6c757d; color: white; padding: 8px 20px; font-size: 0.9rem; border: none; border-radius: 8px; font-weight: 600; }
+        .btn-back:hover { background: #5a6268; color: white; transform: translateY(-2px); }
+        .btn-view { background: #3498db; color: white; padding: 4px 12px; font-size: 0.7rem; border: none; border-radius: 4px; text-decoration: none; display: inline-block; }
+        .btn-view:hover { background: #2980b9; color: white; }
+        .upload-box { border: 2px dashed #bdc3c7; border-radius: 12px; padding: 20px; text-align: center; transition: all 0.3s; cursor: pointer; }
+        .upload-box:hover { border-color: #3498db; background: #f8f9fa; }
+        .upload-box.dragover { border-color: #27ae60; background: #eafaf1; }
+        .upload-box i { font-size: 36px; color: #bdc3c7; margin-bottom: 5px; }
+        .upload-box .upload-text { color: #7f8c8d; font-size: 0.85rem; }
+        .total-liters-display { font-size: 1.8rem; font-weight: 700; color: #2c3e50; background: #f8f9fa; padding: 6px 15px; border-radius: 8px; border: 2px solid #e0e0e0; display: inline-block; min-width: 120px; text-align: center; height: 48px; display: flex; align-items: center; justify-content: center; }
+        .remove-file { cursor: pointer; color: #e74c3c; font-size: 0.85rem; }
+        .remove-file:hover { text-decoration: underline; }
+        .uploaded-file-info { background: #eafaf1; border: 1px solid #27ae60; border-radius: 8px; padding: 6px 12px; margin-top: 8px; }
+        .uploaded-file-info i { color: #27ae60; }
+        .form-section-title { font-size: 0.75rem; text-transform: uppercase; color: #7f8c8d; letter-spacing: 0.3px; font-weight: 600; margin-bottom: 2px; }
+        .bill-preview { margin-top: 8px; }
+        .bottom-actions { display: flex; gap: 10px; margin-top: 12px; }
+        .form-group { margin-bottom: 10px; }
+        .form-group .form-section-title { margin-bottom: 2px; }
+        .form-group .form-control { padding: 6px 12px; }
+        .left-column .form-group { margin-bottom: 8px; }
+        .card-body { padding: 20px 25px; }
         
-        body {
-            font-family: 'Noto Sans Devanagari', 'Mangal', sans-serif !important;
-            background: #f0f2f5;
-            padding: 20px;
-        }
-        
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-        }
-        
-        .header {
-            background: linear-gradient(135deg, #2d6a4f 0%, #1b4332 100%);
-            color: white;
-            padding: 20px 30px;
-            border-radius: 16px;
-            margin-bottom: 25px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        
-        .header h2 {
-            font-weight: 700;
-            font-size: 24px;
-            margin: 0;
-        }
-        
-        .header .subtitle {
-            opacity: 0.8;
-            font-size: 14px;
-        }
-        
-        .header .btn-back {
-            background: rgba(255,255,255,0.2);
-            color: white;
-            border: none;
-            padding: 8px 20px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-weight: 500;
-            transition: all 0.3s;
-        }
-        
-        .header .btn-back:hover {
-            background: rgba(255,255,255,0.3);
-            color: white;
-        }
-        
-        .form-section {
-            background: white;
-            border-radius: 16px;
-            padding: 30px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
-            margin-bottom: 25px;
-        }
-        
-        .form-section .section-title {
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 20px;
-            color: #2d3748;
-        }
-        
-        .form-section .section-title i {
-            color: #2d6a4f;
-            margin-right: 10px;
-        }
-        
-        .form-label {
-            font-weight: 500;
-            font-size: 13px;
-            color: #4a5568;
-            margin-bottom: 5px;
-        }
-        
-        .form-label .required {
-            color: #e53e3e;
-        }
-        
-        .form-control, .form-select {
-            border-radius: 10px;
-            border: 2px solid #e2e8f0;
-            padding: 10px 14px;
-            font-size: 14px;
-            transition: all 0.3s;
-        }
-        
-        .form-control:focus, .form-select:focus {
-            border-color: #2d6a4f;
-            box-shadow: 0 0 0 0.2rem rgba(45, 106, 79, 0.15);
-        }
-        
-        .form-control[readonly] {
-            background: #f7fafc;
-        }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, #2d6a4f 0%, #1b4332 100%);
-            border: none;
-            padding: 12px 35px;
-            font-weight: 600;
-            border-radius: 10px;
-            transition: all 0.3s;
-        }
-        
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(45, 106, 79, 0.3);
-        }
-        
-        .btn-outline-secondary {
-            border-radius: 10px;
-            padding: 10px 25px;
-            font-weight: 500;
-            border: 2px solid #e2e8f0;
-        }
-        
-        .btn-outline-secondary:hover {
-            background: #f7fafc;
-            border-color: #2d6a4f;
-        }
-        
-        .file-upload-wrapper {
-            position: relative;
-            border: 2px dashed #e2e8f0;
-            border-radius: 10px;
-            padding: 25px 20px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            background: #fafbfc;
-        }
-        
-        .file-upload-wrapper:hover {
-            border-color: #2d6a4f;
-            background: #f7fafc;
-        }
-        
-        .file-upload-wrapper input[type="file"] {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            opacity: 0;
-            cursor: pointer;
-        }
-        
-        .file-upload-wrapper .icon {
-            font-size: 32px;
-            color: #a0aec0;
-        }
-        
-        .file-upload-wrapper .text {
-            color: #718096;
-            font-size: 14px;
-            margin-top: 8px;
-        }
-        
-        .file-upload-wrapper .text strong {
-            color: #2d6a4f;
-        }
-        
-        .file-upload-wrapper .small-text {
-            font-size: 12px;
-            color: #a0aec0;
-        }
-        
-        .flash-messages {
-            position: fixed;
-            top: 80px;
-            right: 20px;
-            z-index: 1000;
-            min-width: 300px;
-            max-width: 450px;
-        }
-        
-        .flash-messages .alert {
-            border-radius: 10px;
-            border: none;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-            padding: 12px 18px;
-        }
-        
-        .btn-group-vertical {
-            gap: 10px;
-        }
-        
-        .btn-group-vertical .btn {
-            width: 100%;
-            border-radius: 10px !important;
-        }
+        .history-section { margin-top: 25px; }
+        .history-section .table th { background: #f8f9fa; font-size: 0.75rem; text-transform: uppercase; }
+        .history-section .table td { font-size: 0.85rem; vertical-align: middle; }
+        .history-section .table-container { max-height: 300px; overflow-y: auto; }
+        .history-section .table thead { position: sticky; top: 0; z-index: 10; }
+        .badge-bill { background: #3498db; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.65rem; }
+        .no-records { text-align: center; padding: 30px; color: #95a5a6; }
+        .no-records i { font-size: 36px; display: block; margin-bottom: 10px; }
+        .badge-no-bill { background: #95a5a6; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.65rem; }
         
         @media (max-width: 768px) {
-            .header {
-                flex-direction: column;
-                text-align: center;
-                padding: 20px;
-            }
-            .header .btn-back {
-                margin-top: 10px;
-            }
-            .form-section {
-                padding: 20px;
-            }
-            .flash-messages {
-                min-width: auto;
-                width: 90%;
-                right: 5%;
-            }
+            .bottom-actions { flex-direction: column; }
+            .bottom-actions .btn-submit,
+            .bottom-actions .btn-cancel { width: 100%; }
+            .card-body { padding: 15px; }
+            .history-section .table-container { max-height: 200px; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Flash Messages -->
-        <div class="flash-messages">
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                            <i class="fas fa-{% if category == 'success' %}check-circle{% elif category == 'danger' %}exclamation-circle{% else %}info-circle{% endif %} me-2"></i>
-                            {{ message }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        </div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
-        </div>
-
+    <div class="main-container">
         <!-- Header -->
-        <div class="header">
-            <div>
-                <h2><i class="fas fa-gas-pump"></i> {% if edit_mode %}Edit{% else %}Add{% endif %} Diesel Purchase</h2>
-                <div class="subtitle">{% if edit_mode %}Update purchase details{% else %}Enter new diesel purchase details{% endif %}</div>
+        <div class="header-card">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h1><i class="fas fa-gas-pump"></i> 
+                        {% if edit_mode %}Edit Diesel Purchase{% else %}Add New Purchase{% endif %}
+                    </h1>
+                    <div class="small">{% if edit_mode %}Update existing purchase record{% else %}Enter diesel purchase details{% endif %}</div>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <a href="{{ url_for('index') }}" class="btn-back">
+                        <i class="fas fa-home"></i> Main Menu
+                    </a>
+                    <span class="badge bg-success p-2 ms-2"><i class="fas fa-check"></i> {{ now.strftime('%d %B %Y') if now else '' }}</span>
+                </div>
             </div>
-            <a href="{{ url_for('diesel_index') }}" class="btn-back">
-                <i class="fas fa-arrow-left"></i> Back to List
-            </a>
         </div>
 
-        <!-- Form -->
-        <div class="form-section">
-            <div class="section-title">
-                <i class="fas fa-{% if edit_mode %}edit{% else %}plus-circle{% endif %}"></i> 
-                {% if edit_mode %}Edit Purchase{% else %}Add New Purchase{% endif %}
-            </div>
-            
-            <form method="POST" enctype="multipart/form-data">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label for="purchase_date" class="form-label">Date <span class="required">*</span></label>
-                        <input type="date" class="form-control" id="purchase_date" name="purchase_date" 
-                               value="{{ purchase.purchase_date if purchase else now.strftime('%Y-%m-%d') }}" required>
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <label for="product" class="form-label">Product</label>
-                        <input type="text" class="form-control" id="product" name="product" 
-                               value="{{ purchase.product if purchase else 'Diesel' }}">
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <label for="amount" class="form-label">Amount (₹) <span class="required">*</span></label>
-                        <input type="number" step="0.01" class="form-control" id="amount" name="amount" 
-                               value="{{ purchase.amount if purchase else '' }}" 
-                               placeholder="Enter total amount" required>
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <label for="rate" class="form-label">Rate (₹/L) <span class="required">*</span></label>
-                        <input type="number" step="0.01" class="form-control" id="rate" name="rate" 
-                               value="{{ purchase.rate if purchase else '' }}" 
-                               placeholder="Enter price per liter" required>
-                    </div>
-                    
-                    <div class="col-md-12">
-                        <label class="form-label">Total Liters (Auto-calculated)</label>
-                        <input type="text" class="form-control" id="total_liters" 
-                               value="{% if purchase and purchase.total_liter %}{{ '%.3f'|format(purchase.total_liter) }} L{% else %}0.000 L{% endif %}" readonly>
-                        <div class="mt-1">
-                            <small class="text-muted">
-                                <i class="fas fa-info-circle"></i> Liters will be calculated automatically when you enter Amount and Rate
-                            </small>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-12">
-                        <label class="form-label">Bill Image</label>
-                        <div class="file-upload-wrapper">
-                            <div class="icon"><i class="fas fa-cloud-upload-alt"></i></div>
-                            <div class="text">
-                                <strong>Choose file</strong> or drag and drop<br>
-                                <span class="small-text">PNG, JPG, JPEG, GIF, PDF (Max 16MB)</span>
+        <!-- Main Form -->
+        <div class="card">
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data" id="purchaseForm">
+                    {% if edit_mode %}
+                    <input type="hidden" name="_method" value="PUT">
+                    {% endif %}
+
+                    <div class="row">
+                        <!-- LEFT COLUMN - Form Fields -->
+                        <div class="col-md-7 left-column">
+                            <div class="form-group">
+                                <div class="form-section-title"><i class="fas fa-calendar-alt"></i> Date</div>
+                                <input type="date" class="form-control" name="purchase_date" 
+                                       value="{% if purchase %}{{ purchase.purchase_date.strftime('%Y-%m-%d') if purchase.purchase_date else '' }}{% else %}{{ now.strftime('%Y-%m-%d') if now else '' }}{% endif %}" required>
                             </div>
-                            <input type="file" name="bill_image" accept=".png,.jpg,.jpeg,.gif,.pdf">
+
+                            <div class="form-group">
+                                <div class="form-section-title"><i class="fas fa-tag"></i> Product</div>
+                                <select class="form-select" name="product" required>
+                                    <option value="Diesel" {% if not purchase or purchase.product == 'Diesel' %}selected{% endif %}>Diesel</option>
+                                    <option value="Petrol" {% if purchase and purchase.product == 'Petrol' %}selected{% endif %}>Petrol</option>
+                                    <option value="CNG" {% if purchase and purchase.product == 'CNG' %}selected{% endif %}>CNG</option>
+                                    <option value="LPG" {% if purchase and purchase.product == 'LPG' %}selected{% endif %}>LPG</option>
+                                    <option value="Other" {% if purchase and purchase.product == 'Other' %}selected{% endif %}>Other</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <div class="form-section-title"><i class="fas fa-rupee-sign"></i> Amount (₹)</div>
+                                <input type="number" step="0.01" class="form-control" name="amount" 
+                                       value="{{ purchase.amount if purchase else '' }}" 
+                                       placeholder="Enter total amount" required>
+                            </div>
+
+                            <div class="form-group">
+                                <div class="form-section-title"><i class="fas fa-percent"></i> Rate (₹/Liter)</div>
+                                <input type="number" step="0.01" class="form-control" name="rate" 
+                                       value="{{ purchase.rate if purchase else '' }}" 
+                                       placeholder="Enter price per liter" required>
+                            </div>
+
+                            <div class="form-group">
+                                <div class="form-section-title"><i class="fas fa-tachometer-alt"></i> Total Liters</div>
+                                <div class="total-liters-display" id="totalLitersDisplay">
+                                    {% if purchase %}
+                                        {{ "%.3f"|format(purchase.total_liter|float) if purchase.total_liter else '0.000' }}
+                                    {% else %}
+                                        0.000
+                                    {% endif %}
+                                </div>
+                                <input type="hidden" name="total_liter" id="totalLitersInput" 
+                                       value="{% if purchase %}{{ purchase.total_liter }}{% else %}0{% endif %}">
+                            </div>
                         </div>
-                        {% if purchase and purchase.bill_image_path %}
-                        <div class="mt-2">
-                            <small class="text-success">
-                                <i class="fas fa-check-circle"></i> Current bill uploaded
-                            </small>
-                            <a href="{{ url_for('uploaded_file', filename=purchase.bill_image_path.split('/')[-1]) }}" 
-                               target="_blank" class="btn btn-sm btn-outline-primary ms-2">
-                                <i class="fas fa-eye"></i> View Bill
-                            </a>
+
+                        <!-- RIGHT COLUMN - BILL UPLOAD -->
+                        <div class="col-md-5">
+                            <div class="border rounded p-3" style="height: 100%; display: flex; flex-direction: column;">
+                                <h5><i class="fas fa-upload"></i> Upload Bill Image</h5>
+                                <p class="text-muted small">Upload bill image for reference (JPG, PNG, PDF)</p>
+                                
+                                <div class="upload-box" id="dropZone">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                    <div class="upload-text">
+                                        <strong>Click to upload</strong> or drag and drop
+                                    </div>
+                                    <div class="upload-text">PNG, JPG, PDF (max 16MB)</div>
+                                    <input type="file" name="bill_image" id="billImageInput" 
+                                           accept=".png,.jpg,.jpeg,.gif,.pdf" style="display:none;">
+                                </div>
+
+                                <div id="fileInfo" class="mt-2" style="display:none;">
+                                    <div class="uploaded-file-info">
+                                        <i class="fas fa-check-circle"></i>
+                                        <span id="fileNameDisplay"></span>
+                                        <span class="remove-file ms-2" onclick="removeFile()">
+                                            <i class="fas fa-times"></i> Remove
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {% if purchase and purchase.bill_image_path %}
+                                <div class="bill-preview mt-2" id="billPreview">
+                                    <div class="card">
+                                        <div class="card-body text-center py-2">
+                                            <i class="fas fa-file-pdf fa-2x text-danger"></i>
+                                            <div class="file-name small">{{ purchase.bill_image_path.split('/')[-1] if purchase.bill_image_path else 'bill.pdf' }}</div>
+                                            <small class="text-muted">File uploaded</small>
+                                            <div class="mt-1">
+                                                <a href="{{ url_for('uploaded_file', filename=purchase.bill_image_path.split('/')[-1]) }}" target="_blank" class="btn btn-sm btn-primary">
+                                                    <i class="fas fa-eye"></i> View
+                                                </a>
+                                                <span class="remove-file ms-2" onclick="removeFile()">
+                                                    <i class="fas fa-trash"></i> Remove
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                <div class="bottom-actions mt-3">
+                                    <button type="submit" class="btn-submit">
+                                        <i class="fas fa-save"></i> 
+                                        {% if edit_mode %}Update Purchase{% else %}Save Purchase{% endif %}
+                                    </button>
+                                    <a href="{{ url_for('index') }}" class="btn-cancel">
+                                        <i class="fas fa-times"></i> Cancel
+                                    </a>
+                                </div>
+                            </div>
                         </div>
-                        {% endif %}
                     </div>
-                    
-                    <div class="col-12">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save"></i> {% if edit_mode %}Update{% else %}Add{% endif %} Purchase
-                        </button>
-                        <a href="{{ url_for('diesel_index') }}" class="btn btn-outline-secondary ms-2">
-                            <i class="fas fa-times"></i> Cancel
-                        </a>
-                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Diesel Purchase History -->
+        <div class="history-section">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-history"></i> Diesel Purchase History</h5>
+                    <span class="badge bg-primary">{{ purchases|length if purchases else 0 }} Records</span>
                 </div>
-            </form>
+                <div class="card-body">
+                    {% if purchases and purchases|length > 0 %}
+                    <div class="table-container">
+                        <table class="table table-hover table-striped">
+                            <thead>
+                                <tr>
+                                    <th>SL No</th>
+                                    <th>Date</th>
+                                    <th>Product</th>
+                                    <th>Amount (₹)</th>
+                                    <th>Rate (₹/L)</th>
+                                    <th>Liters</th>
+                                    <th>Bill</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for purchase in purchases %}
+                                <tr>
+                                    <td>{{ purchase.sl_no }}</td>
+                                    <td>{{ purchase.purchase_date.strftime('%d-%m-%Y') if purchase.purchase_date else '' }}</td>
+                                    <td>{{ purchase.product|default('Diesel') }}</td>
+                                    <td><strong>₹{{ "%.2f"|format(purchase.amount|float) }}</strong></td>
+                                    <td>₹{{ "%.2f"|format(purchase.rate|float) }}</td>
+                                    <td>{{ "%.3f"|format(purchase.total_liter|float) }}</td>
+                                    <td>
+                                        {% if purchase.bill_image_path %}
+                                            {% set filename = purchase.bill_image_path.split('/')[-1] if '/' in purchase.bill_image_path else purchase.bill_image_path.split('\\')[-1] %}
+                                            <a href="{{ url_for('uploaded_file', filename=filename) }}" target="_blank" class="btn-view">
+                                                <i class="fas fa-eye"></i> View Bill
+                                            </a>
+                                        {% else %}
+                                            <span class="badge-no-bill"><i class="fas fa-times"></i> No Bill</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="no-records">
+                        <i class="fas fa-inbox"></i>
+                        <p>No diesel purchase records found.</p>
+                        <small class="text-muted">Add your first purchase using the form above.</small>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Auto-calculate liters
-        const amountInput = document.getElementById('amount');
-        const rateInput = document.getElementById('rate');
-        const litersField = document.getElementById('total_liters');
-        
-        if (amountInput && rateInput) {
+        // ===== AUTO-CALCULATE LITERS =====
+        document.addEventListener('DOMContentLoaded', function() {
+            const amountInput = document.querySelector('input[name="amount"]');
+            const rateInput = document.querySelector('input[name="rate"]');
+            const totalLitersDisplay = document.getElementById('totalLitersDisplay');
+            const totalLitersInput = document.getElementById('totalLitersInput');
+
+            function calculateLiters() {
+                const amount = parseFloat(amountInput.value) || 0;
+                const rate = parseFloat(rateInput.value) || 0;
+                
+                let liters = 0;
+                if (rate > 0) {
+                    liters = amount / rate;
+                }
+                
+                totalLitersDisplay.textContent = liters.toFixed(3);
+                totalLitersInput.value = liters.toFixed(3);
+            }
+
             amountInput.addEventListener('input', calculateLiters);
             rateInput.addEventListener('input', calculateLiters);
-        }
-        
-        function calculateLiters() {
-            const amount = parseFloat(amountInput.value);
-            const rate = parseFloat(rateInput.value);
-            
-            if (amount && rate && rate > 0) {
-                const liters = amount / rate;
-                litersField.value = liters.toFixed(3) + ' L';
-            } else {
-                litersField.value = '0.000 L';
-            }
-        }
-        
-        // File upload preview
-        document.querySelector('.file-upload-wrapper input[type="file"]')?.addEventListener('change', function(e) {
-            const fileName = this.files[0] ? this.files[0].name : 'No file chosen';
-            const textElement = this.parentElement.querySelector('.text');
-            if (this.files[0]) {
-                const fileSize = (this.files[0].size / 1024 / 1024).toFixed(2);
-                textElement.innerHTML = `<strong>${fileName}</strong><br><span class="small-text">${fileSize} MB</span>`;
-            } else {
-                textElement.innerHTML = `<strong>Choose file</strong> or drag and drop<br><span class="small-text">PNG, JPG, JPEG, GIF, PDF (Max 16MB)</span>`;
-            }
+            calculateLiters();
         });
-        
-        // Auto dismiss flash messages
-        setTimeout(function() {
-            var alerts = document.querySelectorAll('.alert');
-            for (var i = 0; i < alerts.length; i++) {
-                (function(alert) {
-                    setTimeout(function() {
-                        alert.classList.remove('show');
-                        setTimeout(function() {
-                            alert.remove();
-                        }, 300);
-                    }, 5000);
-                })(alerts[i]);
+
+        // ===== FILE UPLOAD =====
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('billImageInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+
+        if (dropZone) {
+            dropZone.addEventListener('click', function() {
+                fileInput.click();
+            });
+
+            dropZone.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                this.classList.add('dragover');
+            });
+
+            dropZone.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                this.classList.remove('dragover');
+            });
+
+            dropZone.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.classList.remove('dragover');
+                
+                if (e.dataTransfer.files.length) {
+                    fileInput.files = e.dataTransfer.files;
+                    handleFileSelect(e.dataTransfer.files[0]);
+                }
+            });
+        }
+
+        if (fileInput) {
+            fileInput.addEventListener('change', function() {
+                if (this.files.length) {
+                    handleFileSelect(this.files[0]);
+                }
+            });
+        }
+
+        function handleFileSelect(file) {
+            const validTypes = ['image/png', 'image/jpeg', 'image/gif', 'application/pdf'];
+            if (!validTypes.includes(file.type)) {
+                alert('Please upload a valid image or PDF file.');
+                fileInput.value = '';
+                return;
             }
-        }, 1000);
+
+            if (file.size > 16 * 1024 * 1024) {
+                alert('File size exceeds 16MB limit.');
+                fileInput.value = '';
+                return;
+            }
+
+            fileNameDisplay.textContent = file.name + ' (' + (file.size / 1024 / 1024).toFixed(1) + ' MB)';
+            fileInfo.style.display = 'block';
+            dropZone.querySelector('.upload-text').innerHTML = '<strong>File selected</strong>';
+        }
+
+        function removeFile() {
+            fileInput.value = '';
+            fileInfo.style.display = 'none';
+            const preview = document.getElementById('billPreview');
+            if (preview) {
+                preview.style.display = 'none';
+            }
+            dropZone.querySelector('.upload-text').innerHTML = '<strong>Click to upload</strong> or drag and drop';
+            
+            const removeInput = document.createElement('input');
+            removeInput.type = 'hidden';
+            removeInput.name = 'remove_bill';
+            removeInput.value = 'true';
+            document.getElementById('purchaseForm').appendChild(removeInput);
+        }
     </script>
 </body>
 </html>

@@ -1,310 +1,329 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>डेली ट्रैक्टर</title>
+    <title>🚜 Daily Tractor Entry</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-        .container {
-            max-width: 1400px;
-            background: white;
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            margin: 20px auto;
-        }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-            flex-wrap: wrap;
-        }
-        .header h2 {
-            color: #2d3748;
-            font-weight: 700;
-        }
-        .form-section {
-            background: #f7fafc;
-            padding: 25px;
-            border-radius: 15px;
-            margin-bottom: 30px;
-        }
-        .form-section h4 {
-            color: #2d3748;
-            margin-bottom: 20px;
-        }
-        .form-label {
+        body { background: #f0f2f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .main-container { max-width: 1400px; margin: 20px auto; padding: 20px; }
+        .header-card { background: linear-gradient(135deg, #2c3e50, #3498db); color: white; padding: 25px; border-radius: 15px; margin-bottom: 20px; }
+        .header-card h1 { margin: 0; font-size: 2rem; }
+        .card { border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); margin-bottom: 20px; border: none; }
+        .form-label { font-weight: 600; color: #2c3e50; font-size: 0.95rem; }
+        .form-control, .form-select { border-radius: 8px; border: 2px solid #e0e0e0; padding: 10px 15px; font-size: 1rem; }
+        .form-control:focus, .form-select:focus { border-color: #3498db; box-shadow: 0 0 0 0.2rem rgba(52,152,219,0.15); }
+        
+        /* Smaller time inputs */
+        input[type="time"] {
+            padding: 10px 12px;
+            font-size: 1rem;
+            font-family: monospace;
             font-weight: 600;
-            color: #2d3748;
-        }
-        .form-control, .form-select {
-            border-radius: 10px;
-            border: 2px solid #e2e8f0;
-            padding: 10px 15px;
-        }
-        .form-control:focus, .form-select:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
-        }
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border: none;
-            padding: 12px 30px;
-            font-weight: 600;
-            border-radius: 10px;
-        }
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
-        }
-        .btn-secondary {
-            border-radius: 10px;
-            padding: 10px 25px;
         }
         
-        .table-container {
-            width: 100%;
-            border-radius: 12px;
-            border: 1px solid #e2e8f0;
-            background: white;
-            position: relative;
-        }
+        .btn-submit { background: linear-gradient(135deg, #27ae60, #2ecc71); color: white; padding: 10px 30px; font-size: 1rem; border: none; border-radius: 8px; font-weight: 600; }
+        .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(39,174,96,0.4); }
+        .btn-cancel { background: #95a5a6; color: white; padding: 10px 25px; font-size: 1rem; border: none; border-radius: 8px; font-weight: 600; }
+        .btn-cancel:hover { background: #7f8c8d; transform: translateY(-2px); }
+        .btn-back { background: #6c757d; color: white; padding: 8px 20px; font-size: 0.9rem; border: none; border-radius: 8px; font-weight: 600; }
+        .btn-back:hover { background: #5a6268; color: white; transform: translateY(-2px); }
+        .badge-paid { background: #27ae60; color: white; padding: 4px 14px; border-radius: 20px; font-size: 0.8rem; }
+        .badge-unpaid { background: #e74c3c; color: white; padding: 4px 14px; border-radius: 20px; font-size: 0.8rem; }
         
-        .table-wrapper {
-            display: block;
-            width: 100%;
-            max-height: 400px;
-            overflow: auto;
-            -webkit-overflow-scrolling: touch;
+        /* Table with increased font size */
+        .table th { 
+            background: #f8f9fa; 
+            border-bottom: 2px solid #dee2e6; 
+            font-weight: 600; 
+            font-size: 0.95rem;
+            white-space: nowrap; 
+            padding: 12px 10px;
         }
-        
-        .table-wrapper::-webkit-scrollbar {
-            height: 12px;
-            width: 12px;
-        }
-        
-        .table-wrapper::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 10px;
-        }
-        
-        .table-wrapper::-webkit-scrollbar-thumb {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 10px;
-        }
-        
-        .table-wrapper::-webkit-scrollbar-thumb:hover {
-            background: #764ba2;
-        }
-        
-        .table-wrapper {
-            scrollbar-width: auto;
-            scrollbar-color: #667eea #f1f1f1;
-        }
-        
-        .table {
-            margin-bottom: 0;
-            min-width: 1000px;
-            width: 100%;
-        }
-        
-        .table th {
-            background: #f7fafc;
-            border-bottom: 2px solid #e2e8f0;
-            color: #2d3748;
-            font-weight: 600;
-            white-space: nowrap;
-            padding: 12px 15px;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-        
-        .table td {
+        .table td { 
+            font-size: 0.95rem;
+            white-space: nowrap; 
+            padding: 10px 10px;
             vertical-align: middle;
-            padding: 12px 15px;
-            white-space: nowrap;
+        }
+        .table-container { overflow-x: auto; }
+        .table-responsive { max-height: 500px; overflow-y: auto; }
+        .table thead { position: sticky; top: 0; z-index: 10; }
+        .phone-cell { font-family: monospace; font-weight: bold; font-size: 0.95rem; }
+        
+        /* Flash Message Styles */
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
         }
         
-        .table tbody tr:nth-child(even) {
-            background-color: #f8f9fa;
+        .flash-message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            min-width: 300px;
+            max-width: 500px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            border-radius: 12px;
+            padding: 16px 20px;
+            animation: slideInRight 0.5s ease;
+            font-size: 1rem;
         }
         
-        .table tbody tr:hover {
-            background-color: #e8f0fe;
+        .flash-message .progress {
+            height: 3px;
+            margin-top: 10px;
+            border-radius: 0;
+            background: rgba(0,0,0,0.1);
         }
         
-        .badge-reason {
-            padding: 5px 12px;
-            border-radius: 20px;
+        .flash-message .progress-bar {
+            height: 3px;
+            border-radius: 0;
+            animation: progressBar 15s linear forwards;
+        }
+        
+        @keyframes progressBar {
+            from { width: 100%; }
+            to { width: 0%; }
+        }
+        
+        .flash-success .progress-bar { background: #27ae60; }
+        .flash-danger .progress-bar { background: #e74c3c; }
+        .flash-error .progress-bar { background: #e74c3c; }
+        .flash-warning .progress-bar { background: #f39c12; }
+        .flash-info .progress-bar { background: #3498db; }
+        
+        .card-header {
+            font-size: 1.05rem;
+            font-weight: 600;
+        }
+        
+        .card-header .badge {
             font-size: 0.85rem;
         }
         
-        .alert {
-            border-radius: 10px;
-        }
-        
         @media (max-width: 768px) {
-            .header {
-                flex-direction: column;
-                text-align: center;
-            }
-            .header .btn-group {
-                margin-top: 15px;
+            .flash-message {
+                top: 10px;
+                right: 10px;
+                left: 10px;
+                min-width: auto;
+                max-width: none;
             }
             .table th, .table td {
-                padding: 8px 10px;
                 font-size: 0.85rem;
-            }
-            .table-wrapper {
-                max-height: 300px;
-            }
-        }
-        
-        @media (max-width: 480px) {
-            .container {
-                padding: 15px;
-            }
-            .form-section {
-                padding: 15px;
-            }
-            .table th, .table td {
                 padding: 6px 8px;
-                font-size: 0.75rem;
-            }
-            .table-wrapper {
-                max-height: 250px;
             }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <div>
-                <h2><i class="fas fa-tractor" style="color: #667eea;"></i> डेली ट्रैक्टर</h2>
-                <p class="text-muted">ट्रैक्टर का दैनिक विवरण दर्ज करें</p>
-            </div>
-            <div>
-                <a href="{{ url_for('index') }}" class="btn btn-secondary">
-                    <i class="fas fa-home"></i> मुख्य मेनू
-                </a>
-            </div>
-        </div>
+    <div class="main-container">
 
+        <!-- ===== FLASH MESSAGES WITH AUTO-DISMISS (15 SECONDS) ===== -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    <div class="flash-message flash-{{ category }} alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        <div class="d-flex align-items-center">
+                            <div class="me-2">
+                                {% if category == 'success' %}
+                                    <i class="fas fa-check-circle text-success" style="font-size: 1.5rem;"></i>
+                                {% elif category == 'danger' or category == 'error' %}
+                                    <i class="fas fa-exclamation-circle text-danger" style="font-size: 1.5rem;"></i>
+                                {% elif category == 'warning' %}
+                                    <i class="fas fa-exclamation-triangle text-warning" style="font-size: 1.5rem;"></i>
+                                {% else %}
+                                    <i class="fas fa-info-circle text-info" style="font-size: 1.5rem;"></i>
+                                {% endif %}
+                            </div>
+                            <div class="flex-grow-1">
+                                <strong style="font-size: 1.1rem;">{{ message }}</strong>
+                            </div>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="margin-left: 10px;"></button>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%;"></div>
+                        </div>
                     </div>
                 {% endfor %}
             {% endif %}
         {% endwith %}
 
-        <div class="form-section">
-            <h4><i class="fas fa-plus-circle" style="color: #667eea;"></i> नई प्रविष्टि</h4>
-            <form method="POST" action="{{ url_for('insert_daily_tractor') }}">
-                <div class="row g-3">
-                    <div class="col-md-3">
-                        <label for="s_date" class="form-label">तारीख</label>
-                        <input type="date" class="form-control" id="s_date" name="s_date" required>
-                    </div>
-                    <div class="col-md-3">
-                        <label for="iname" class="form-label">नाम</label>
-                        <input type="text" class="form-control" id="iname" name="iname" placeholder="किसान का नाम" required>
-                    </div>
-                    <div class="col-md-3">
-                        <label for="phone" class="form-label">फोन</label>
-                        <input type="text" class="form-control" id="phone" name="phone" placeholder="10 अंक" maxlength="10" required>
-                    </div>
-                    <div class="col-md-3">
-                        <label for="advance_amount" class="form-label">अग्रिम राशि</label>
-                        <input type="number" step="0.01" class="form-control" id="advance_amount" name="advance_amount" value="0" required>
-                    </div>
-                    <div class="col-md-3">
-                        <label for="start_time" class="form-label">प्रारंभ समय</label>
-                        <input type="time" class="form-control" id="start_time" name="start_time" value="08:00" required>
-                    </div>
-                    <div class="col-md-3">
-                        <label for="stop_time" class="form-label">समाप्ति समय</label>
-                        <input type="time" class="form-control" id="stop_time" name="stop_time" value="17:00" required>
-                    </div>
-                    <div class="col-md-3">
-                        <label for="rate" class="form-label">दर (₹/घंटा)</label>
-                        <input type="number" step="0.01" class="form-control" id="rate" name="rate" placeholder="500" required>
-                    </div>
-                    <div class="col-md-3">
-                        <label for="reason" class="form-label">कारण</label>
-                        <select class="form-select" id="reason" name="reason" required>
-                            <option value="">-- चुनें --</option>
-                            {% for value, label in reason_options %}
-                            <option value="{{ value }}">{{ label }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-12">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save"></i> सहेजें
-                        </button>
-                    </div>
+        <!-- ===== HEADER ===== -->
+        <div class="header-card">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h1><i class="fas fa-tractor"></i> Daily Tractor Entry</h1>
+                    <div class="small" style="font-size: 0.95rem;">Manage tractor records & farmer details</div>
                 </div>
-            </form>
+                <div class="col-md-6 text-md-end">
+                    <a href="{{ url_for('index') }}" class="btn-back">
+                        <i class="fas fa-home"></i> Main Menu
+                    </a>
+                    <a href="{{ url_for('daily_tractor_report') }}" class="btn btn-info text-white ms-2" style="font-size: 0.9rem;">
+                        <i class="fas fa-file-alt"></i> Report
+                    </a>
+                    <span class="badge bg-light text-dark p-2 ms-2" style="font-size: 0.85rem;">
+                        <i class="fas fa-calendar-alt"></i> 
+                        {{ current_datetime.strftime('%d %B %Y %I:%M %p') if current_datetime else '' }}
+                    </span>
+                </div>
+            </div>
         </div>
 
-        <h4><i class="fas fa-list" style="color: #667eea;"></i> पिछली प्रविष्टियाँ</h4>
-        
-        <div class="table-container">
-            <div class="table-wrapper">
-                {% if entries and entries|length > 0 %}
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>तारीख</th>
-                            <th>नाम</th>
-                            <th>फोन</th>
-                            <th>प्रारंभ</th>
-                            <th>समाप्ति</th>
-                            <th>अवधि</th>
-                            <th>दर</th>
-                            <th>अग्रिम</th>
-                            <th>कारण</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for entry in entries %}
-                        <tr>
-                            <td>{{ entry.s_date }}</td>
-                            <td>{{ entry.iname }}</td>
-                            <td>{{ entry.phone or 'N/A' }}</td>
-                            <td>{{ entry.start_time }}</td>
-                            <td>{{ entry.stop_time }}</td>
-                            <td>{{ entry.duration }}</td>
-                            <td>₹{{ "%.2f"|format(entry.rate) }}</td>
-                            <td>₹{{ "%.2f"|format(entry.advance_amount) }}</td>
-                            <td>
-                                <span class="badge-reason" style="background: #667eea; color: white;">
-                                    {{ entry.reason_label }}
-                                </span>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-                {% else %}
-                <div class="text-center py-4">
-                    <i class="fas fa-inbox" style="font-size: 3rem; color: #a0aec0;"></i>
-                    <p class="text-muted mt-2">कोई प्रविष्टि नहीं मिली</p>
+        <!-- ===== ENTRY FORM ===== -->
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-plus-circle"></i> New Entry
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('insert_daily_tractor') }}">
+                    <div class="row g-3">
+                        <!-- Date -->
+                        <div class="col-md-3">
+                            <label class="form-label"><i class="fas fa-calendar-alt"></i> Date</label>
+                            <input type="date" class="form-control" name="s_date" id="dateInput" required>
+                        </div>
+
+                        <!-- Farmer Name -->
+                        <div class="col-md-3">
+                            <label class="form-label"><i class="fas fa-user"></i> Farmer Name</label>
+                            <input type="text" class="form-control" name="iname" placeholder="किसान का नाम" required>
+                        </div>
+
+                        <!-- Phone -->
+                        <div class="col-md-2">
+                            <label class="form-label"><i class="fas fa-phone"></i> Phone</label>
+                            <input type="text" class="form-control" name="phone" placeholder="10 digits" maxlength="10" required>
+                        </div>
+
+                        <!-- Advance -->
+                        <div class="col-md-2">
+                            <label class="form-label"><i class="fas fa-money-bill"></i> Advance (₹)</label>
+                            <input type="number" step="0.01" class="form-control" name="advance_amount" value="0" required>
+                        </div>
+
+                        <!-- Start Time -->
+                        <div class="col-md-3">
+                            <label class="form-label"><i class="fas fa-clock"></i> Start Time</label>
+                            <input type="time" class="form-control" name="start_time" required>
+                        </div>
+
+                        <!-- Stop Time -->
+                        <div class="col-md-3">
+                            <label class="form-label"><i class="fas fa-clock"></i> Stop Time</label>
+                            <input type="time" class="form-control" name="stop_time" required>
+                        </div>
+
+                        <!-- Rate -->
+                        <div class="col-md-2">
+                            <label class="form-label"><i class="fas fa-rupee-sign"></i> Rate (₹/hr)</label>
+                            <input type="number" step="0.01" class="form-control" name="rate" placeholder="Rate" required>
+                        </div>
+
+                        <!-- Reason -->
+                        <div class="col-md-4">
+                            <label class="form-label"><i class="fas fa-tasks"></i> Reason</label>
+                            <select class="form-select" name="reason" required>
+                                <option value="">-- चुने --</option>
+                                {% for value, label in reason_options %}
+                                    <option value="{{ value }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Buttons -->
+                        <div class="col-md-12 text-end">
+                            <button type="submit" class="btn-submit">
+                                <i class="fas fa-save"></i> Save Entry
+                            </button>
+                            <button type="reset" class="btn-cancel ms-2">
+                                <i class="fas fa-undo"></i> Reset
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- ===== PREVIOUS ENTRIES ===== -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="fas fa-list"></i> Previous Entries
+                    <span class="badge bg-secondary ms-2">{{ entries|length }}</span>
                 </div>
+                <div>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="window.print()" style="font-size: 0.85rem;">
+                        <i class="fas fa-print"></i> Print
+                    </button>
+                </div>
+            </div>
+            <div class="card-body table-container">
+                {% if entries %}
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Date</th>
+                                    <th>Farmer</th>
+                                    <th>Phone</th>
+                                    <th>Start</th>
+                                    <th>Stop</th>
+                                    <th>Duration</th>
+                                    <th>Rate</th>
+                                    <th>Amount</th>
+                                    <th>Advance</th>
+                                    <th>Balance</th>
+                                    <th>Reason</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for entry in entries %}
+                                    <tr>
+                                        <td>{{ loop.index }}</td>
+                                        <td>{{ entry.s_date.strftime('%d-%m-%Y') if entry.s_date else '' }}</td>
+                                        <td><strong>{{ entry.iname }}</strong></td>
+                                        <td class="phone-cell">{{ entry.phone|default('-') }}</td>
+                                        <td>{{ entry.start_time.strftime('%H:%M') if entry.start_time else '' }}</td>
+                                        <td>{{ entry.stop_time.strftime('%H:%M') if entry.stop_time else '' }}</td>
+                                        <td>{{ entry.duration|default('0h 0m') }}</td>
+                                        <td>₹{{ "%.2f"|format(entry.rate|float) }}</td>
+                                        <td>₹{{ "%.2f"|format(entry.amount|float) }}</td>
+                                        <td>₹{{ "%.2f"|format(entry.advance_amount|float) }}</td>
+                                        <td>₹{{ "%.2f"|format(entry.balance_amount|float) }}</td>
+                                        <td>{{ entry.reason_label|default(entry.reason) }}</td>
+                                        <td>
+                                            {% if entry.paid %}
+                                                <span class="badge-paid"><i class="fas fa-check"></i> PAID</span>
+                                            {% else %}
+                                                <span class="badge-unpaid"><i class="fas fa-times"></i> UNPAID</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-inbox fa-3x text-muted"></i>
+                        <h5 class="mt-2">No records found</h5>
+                        <p class="text-muted">Add your first tractor entry using the form above.</p>
+                    </div>
                 {% endif %}
             </div>
         </div>
@@ -312,7 +331,65 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        document.getElementById('s_date').value = new Date().toISOString().split('T')[0];
+        // ===== SET TODAY'S DATE IN DATE INPUT =====
+        document.addEventListener('DOMContentLoaded', function() {
+            const dateInput = document.getElementById('dateInput');
+            if (dateInput) {
+                const today = new Date();
+                const year = today.getFullYear();
+                const month = String(today.getMonth() + 1).padStart(2, '0');
+                const day = String(today.getDate()).padStart(2, '0');
+                dateInput.value = year + '-' + month + '-' + day;
+            }
+        });
+
+        // ===== AUTO-DISMISS FLASH MESSAGES AFTER 15 SECONDS =====
+        document.addEventListener('DOMContentLoaded', function() {
+            const flashMessages = document.querySelectorAll('.flash-message');
+            
+            flashMessages.forEach(function(message) {
+                setTimeout(function() {
+                    message.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                    message.style.opacity = '0';
+                    message.style.transform = 'translateX(100%)';
+                    
+                    setTimeout(function() {
+                        if (message.parentNode) {
+                            message.remove();
+                        }
+                    }, 500);
+                }, 15000);
+            });
+            
+            document.querySelectorAll('.flash-message .btn-close').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    const parent = this.closest('.flash-message');
+                    if (parent) {
+                        parent.style.transition = 'opacity 0.3s ease';
+                        parent.style.opacity = '0';
+                        setTimeout(function() {
+                            if (parent.parentNode) {
+                                parent.remove();
+                            }
+                        }, 300);
+                    }
+                });
+            });
+        });
+
+        // ===== PHONE NUMBER VALIDATION =====
+        document.querySelector('input[name="phone"]').addEventListener('input', function() {
+            this.value = this.value.replace(/[^0-9]/g, '');
+            if (this.value.length > 10) {
+                this.value = this.value.slice(0, 10);
+            }
+        });
+
+        // ===== CONSOLE WELCOME =====
+        console.log('%c🚜 Daily Tractor Entry', 'font-size: 20px; font-weight: bold; color: #2c3e50;');
+        console.log('%c📊 Total Records: {{ entries|length }}', 'font-size: 14px; color: #27ae60;');
+        console.log('%c💳 UPI: {{ UPI_ID }}', 'font-size: 14px; color: #6c5ce7;');
+        console.log('%c⏱️ Flash messages disappear after 15 seconds', 'font-size: 12px; color: #f39c12;');
     </script>
 </body>
 </html>
