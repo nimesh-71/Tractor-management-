@@ -28,10 +28,6 @@ app.secret_key = os.environ.get("SECRET_KEY", "tractor-secret-key-2026")
 # Get this from: Render Dashboard -> PostgreSQL -> Your Database -> Connections -> Internal Connection String
 DATABASE_URL = "postgresql://agriculture_user:KSHdZQQWea1X6C2DomBqWTzKBYAXFzFM@dpg-d93818mh2hms73ce41ag-a.oregon-postgres.render.com:5432/agriculture"
 
-# Add sslmode=require to the connection string
-if "sslmode" not in DATABASE_URL:
-    DATABASE_URL += "?sslmode=require"
-
 logger.info(f"✅ Using DATABASE_URL for connection")
 
 # UPI Configuration
@@ -55,15 +51,50 @@ payment_confirmations = {}
 # ==================== DATABASE FUNCTIONS ====================
 
 def get_db_connection():
-    """Get database connection using Render Internal Connection String"""
+    """Get database connection with proper SSL configuration"""
     try:
-        conn = psycopg2.connect(DATABASE_URL, connect_timeout=30)
+        # Use the DATABASE_URL with sslmode=require
+        conn = psycopg2.connect(
+            DATABASE_URL,
+            sslmode='require',
+            connect_timeout=30,
+            keepalives=1,
+            keepalives_idle=5,
+            keepalives_interval=2,
+            keepalives_count=2
+        )
         conn.set_client_encoding('UTF8')
         logger.info("✅ Database connection successful")
         return conn
     except Exception as e:
-        logger.error(f"❌ Database error: {e}")
-        return None
+        logger.error(f"❌ Database error (require): {e}")
+        # Try with sslmode=verify-full as fallback
+        try:
+            conn = psycopg2.connect(
+                DATABASE_URL,
+                sslmode='verify-full',
+                connect_timeout=30
+            )
+            conn.set_client_encoding('UTF8')
+            logger.info("✅ Database connection successful (verify-full)")
+            return conn
+        except Exception as e2:
+            logger.error(f"❌ Database error (verify-full): {e2}")
+            # Try without SSL as last resort
+            try:
+                # Remove sslmode from URL
+                base_url = DATABASE_URL.split('?')[0]
+                conn = psycopg2.connect(
+                    base_url,
+                    sslmode='disable',
+                    connect_timeout=30
+                )
+                conn.set_client_encoding('UTF8')
+                logger.info("✅ Database connection successful (SSL disabled)")
+                return conn
+            except Exception as e3:
+                logger.error(f"❌ All connection attempts failed: {e3}")
+                return None
 
 def get_db():
     """Alias for get_db_connection"""
