@@ -10,7 +10,7 @@ import sys
 import unicodedata
 import random
 import json
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 import logging
 import traceback
 from werkzeug.utils import secure_filename
@@ -20,23 +20,43 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-app.secret_key = 'your-secret-key-here-change-in-production'
+app.secret_key = os.environ.get("SECRET_KEY", "your-secret-key-here-change-in-production")
 
 # ==================== CONFIGURATION ====================
 
-# Database Configuration
+# Database Configuration - Using Render PostgreSQL
+# Your Render database credentials
 DB_CONFIG = {
-    "host": "localhost",
-    "database": "agriclture",
-    "user": "postgres",
-    "password": "nkb@207119",
-    "port": "5432"
+    "host": os.environ.get("DB_HOST", "dpg-cv5tcbdsi52c73atf77g-a.oregon-postgres.render.com"),
+    "database": os.environ.get("DB_NAME", "agriculture"),
+    "user": os.environ.get("DB_USER", "agriculture_user"),
+    "password": os.environ.get("DB_PASSWORD", "Anukriti@20071971"),
+    "port": os.environ.get("DB_PORT", "5432")
 }
 
+# Alternative: Use DATABASE_URL if provided
+DATABASE_URL = os.environ.get("DATABASE_URL", "")
+if DATABASE_URL:
+    try:
+        result = urlparse(DATABASE_URL)
+        DB_CONFIG = {
+            "host": result.hostname,
+            "database": result.path.lstrip('/'),
+            "user": result.username,
+            "password": result.password,
+            "port": result.port or 5432
+        }
+        logger.info(f"✅ Using production database from DATABASE_URL: {result.hostname}")
+    except Exception as e:
+        logger.error(f"Error parsing DATABASE_URL: {e}")
+        logger.info("✅ Using fallback database configuration")
+
+logger.info(f"✅ Database Config: Host={DB_CONFIG['host']}, Database={DB_CONFIG['database']}, User={DB_CONFIG['user']}")
+
 # UPI Configuration
-UPI_ID = "nimeshab@ybl"
-UPI_NAME = "Nimesh AB"
-UPI_MERCHANT = "Nimesh Agritech"
+UPI_ID = os.environ.get("UPI_ID", "nimeshab@ybl")
+UPI_NAME = os.environ.get("UPI_NAME", "Nimesh AB")
+UPI_MERCHANT = os.environ.get("UPI_MERCHANT", "Nimesh Agritech")
 
 # Upload Configuration
 UPLOAD_FOLDER = 'uploads'
@@ -58,9 +78,10 @@ def get_db_connection():
     try:
         conn = psycopg2.connect(**DB_CONFIG)
         conn.set_client_encoding('UTF8')
+        logger.info("✅ Database connection successful")
         return conn
     except Exception as e:
-        logger.error(f"Database error: {e}")
+        logger.error(f"❌ Database error: {e}")
         return None
 
 def get_db():
@@ -1058,11 +1079,12 @@ def init_db():
     """Initialize all database tables"""
     conn = get_db()
     if not conn:
-        logger.error("Failed to connect to database")
+        logger.error("❌ Failed to connect to database - tables not created")
         return
     
     try:
         cursor = conn.cursor()
+        logger.info("🔧 Creating database tables...")
         
         # Create daily_tractor table with all fields
         cursor.execute('''
@@ -1085,6 +1107,7 @@ def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
+        logger.info("✅ daily_tractor table created")
         
         # Create payment_transactions table
         cursor.execute('''
@@ -1099,6 +1122,7 @@ def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
+        logger.info("✅ payment_transactions table created")
         
         # Create tractor_operations table
         cursor.execute('''
@@ -1114,6 +1138,7 @@ def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
+        logger.info("✅ tractor_operations table created")
         
         # Create batayidar table
         cursor.execute('''
@@ -1123,6 +1148,7 @@ def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
+        logger.info("✅ batayidar table created")
         
         # Create crop table
         cursor.execute('''
@@ -1132,6 +1158,7 @@ def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
+        logger.info("✅ crop table created")
         
         # Create diesel_purchase table
         cursor.execute('''
@@ -1146,14 +1173,16 @@ def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
+        logger.info("✅ diesel_purchase table created")
         
         conn.commit()
-        logger.info("All database tables initialized successfully")
+        logger.info("✅ All database tables initialized successfully!")
         
         # Add sample data if tables are empty
         cursor.execute("SELECT COUNT(*) FROM diesel_purchase")
         count = cursor.fetchone()[0]
         if count == 0:
+            logger.info("📝 Adding sample diesel data...")
             cursor.execute('''
                 INSERT INTO diesel_purchase (purchase_date, amount, rate, product)
                 VALUES 
@@ -1162,11 +1191,12 @@ def init_db():
                     (CURRENT_DATE - INTERVAL '2 days', 1100, 101.88, 'Diesel')
             ''')
             conn.commit()
-            logger.info("Sample diesel data added")
+            logger.info("✅ Sample diesel data added")
         
         cursor.execute("SELECT COUNT(*) FROM tractor_operations")
         count = cursor.fetchone()[0]
         if count == 0:
+            logger.info("📝 Adding sample tractor operation data...")
             cursor.execute('''
                 INSERT INTO tractor_operations (sdate, name_batayidar, crop, start_time, stop_time, rate, reason)
                 VALUES 
@@ -1175,11 +1205,12 @@ def init_db():
                     (CURRENT_DATE - INTERVAL '2 days', 'महेश सिंह', 'मक्का', '10:00:00', '14:00:00', 550, 'sowing')
             ''')
             conn.commit()
-            logger.info("Sample tractor operation data added")
+            logger.info("✅ Sample tractor operation data added")
         
         cursor.execute("SELECT COUNT(*) FROM daily_tractor")
         count = cursor.fetchone()[0]
         if count == 0:
+            logger.info("📝 Adding sample daily tractor data...")
             cursor.execute('''
                 INSERT INTO daily_tractor (s_date, iname, phone, start_time, stop_time, rate, advance_amount, reason)
                 VALUES 
@@ -1187,10 +1218,10 @@ def init_db():
                     (CURRENT_DATE - INTERVAL '1 day', 'दीपक कुमार', '9876543210', '09:00:00', '13:00:00', 800, 300, 'harrowing')
             ''')
             conn.commit()
-            logger.info("Sample daily tractor data added")
+            logger.info("✅ Sample daily tractor data added")
         
     except Exception as e:
-        logger.error(f"Error initializing database: {e}")
+        logger.error(f"❌ Error initializing database: {e}")
         logger.error(traceback.format_exc())
     finally:
         cursor.close()
@@ -1926,21 +1957,25 @@ def api_farmer_totals():
 # ==================== MAIN ====================
 
 if __name__ == '__main__':
+    # Initialize database tables
+    logger.info("🚀 Starting application...")
     init_db()
+    
     port = int(os.environ.get("PORT", 5000))
     print("\n" + "="*70)
     print("🚜 UNIFIED AGRICULTURE MANAGEMENT SYSTEM")
     print("="*70)
-    print("📊 Database: " + DB_CONFIG['database'] + " on " + DB_CONFIG['host'])
-    print("🌐 Server: http://localhost:" + str(port))
+    print(f"📊 Database: {DB_CONFIG['database']} on {DB_CONFIG['host']}")
+    print(f"🌐 Server: http://0.0.0.0:{port}")
     print("\n📍 Available Routes:")
-    print("  - http://localhost:" + str(port) + "/ (Main Menu)")
-    print("  - http://localhost:" + str(port) + "/diesel (Diesel Purchase)")
-    print("  - http://localhost:" + str(port) + "/diesel/add (Add Diesel Purchase)")
-    print("  - http://localhost:" + str(port) + "/daily_tractor (Daily Tractor Entry Form)")
-    print("  - http://localhost:" + str(port) + "/daily_tractor_report (Daily Tractor Report)")
-    print("  - http://localhost:" + str(port) + "/tractor_operation (Tractor Operation)")
-    print("  - http://localhost:" + str(port) + "/download_tractor_report_pdf (Generate Reports)")
-    print("\n💰 UPI ID: " + UPI_ID)
+    print(f"  - http://0.0.0.0:{port}/ (Main Menu)")
+    print(f"  - http://0.0.0.0:{port}/diesel (Diesel Purchase)")
+    print(f"  - http://0.0.0.0:{port}/diesel/add (Add Diesel Purchase)")
+    print(f"  - http://0.0.0.0:{port}/daily_tractor (Daily Tractor Entry Form)")
+    print(f"  - http://0.0.0.0:{port}/daily_tractor_report (Daily Tractor Report)")
+    print(f"  - http://0.0.0.0:{port}/tractor_operation (Tractor Operation)")
+    print(f"  - http://0.0.0.0:{port}/download_tractor_report_pdf (Generate Reports)")
+    print(f"\n💰 UPI ID: {UPI_ID}")
     print("="*70 + "\n")
+    
     app.run(debug=True, host='0.0.0.0', port=port)
