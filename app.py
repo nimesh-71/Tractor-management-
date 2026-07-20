@@ -24,32 +24,16 @@ app.secret_key = os.environ.get("SECRET_KEY", "tractor-secret-key-2026")
 
 # ==================== CONFIGURATION ====================
 
-# Fix DATABASE_URL - replace '#' with '@' (common Render issue)
-DATABASE_URL = os.environ.get("DATABASE_URL", "")
-if DATABASE_URL:
-    # Fix the URL if it has '#' instead of '@'
-    if '#' in DATABASE_URL and '@' not in DATABASE_URL:
-        DATABASE_URL = DATABASE_URL.replace('#', '@')
-        logger.info("✅ Fixed DATABASE_URL format (replaced # with @)")
-    # Add sslmode if not present
-    if 'sslmode' not in DATABASE_URL:
-        if '?' in DATABASE_URL:
-            DATABASE_URL += '&sslmode=require'
-        else:
-            DATABASE_URL += '?sslmode=require'
-        logger.info("✅ Added sslmode=require to DATABASE_URL")
-
-# Database Configuration - Fallback if DATABASE_URL not available
+# HARDCODED Database Configuration - CORRECT username: agriculture_user
 DB_CONFIG = {
-    "host": os.environ.get("DB_HOST", "dpg-d93818mh2hms73ce41ag-a.oregon-postgres.render.com"),
-    "database": os.environ.get("DB_NAME", "agriculture"),
-    "user": os.environ.get("DB_USER", "agriculture_user"),
-    "password": os.environ.get("DB_PASSWORD", "KSHdZQQWea1X6C2DomBqWTzKBYAXFzFM"),
-    "port": os.environ.get("DB_PORT", "5432"),
+    "host": "dpg-d93818mh2hms73ce4lag-a.oregon-postgres.render.com",
+    "database": "agriculture",
+    "user": "agriculture_user",  # ← CORRECT: with 'e'
+    "password": "KSHdZQQWea1X6C2DomBqWTzKBYAXFzFM",
+    "port": "5432",
     "sslmode": "require"
 }
 
-logger.info(f"✅ Using DATABASE_URL: {DATABASE_URL[:30] if DATABASE_URL else 'Not set'}...")
 logger.info(f"✅ Database Config: Host={DB_CONFIG['host']}, Database={DB_CONFIG['database']}, User={DB_CONFIG['user']}")
 
 # UPI Configuration
@@ -75,43 +59,21 @@ payment_confirmations = {}
 def get_db_connection():
     """Get database connection with SSL support"""
     try:
-        # Try DATABASE_URL first
-        if DATABASE_URL:
-            conn = psycopg2.connect(DATABASE_URL, connect_timeout=30)
-            logger.info("✅ Database connection successful (using DATABASE_URL)")
-        else:
-            # Fallback to DB_CONFIG
-            conn = psycopg2.connect(
-                host=DB_CONFIG["host"],
-                database=DB_CONFIG["database"],
-                user=DB_CONFIG["user"],
-                password=DB_CONFIG["password"],
-                port=DB_CONFIG["port"],
-                sslmode=DB_CONFIG["sslmode"],
-                connect_timeout=30
-            )
-            logger.info("✅ Database connection successful (using DB_CONFIG)")
+        conn = psycopg2.connect(
+            host=DB_CONFIG["host"],
+            database=DB_CONFIG["database"],
+            user=DB_CONFIG["user"],  # ← This is now "agriculture_user"
+            password=DB_CONFIG["password"],
+            port=DB_CONFIG["port"],
+            sslmode=DB_CONFIG["sslmode"],
+            connect_timeout=30
+        )
         conn.set_client_encoding('UTF8')
+        logger.info("✅ Database connection successful")
         return conn
     except Exception as e:
         logger.error(f"❌ Database error: {e}")
-        # Try without SSL as fallback
-        try:
-            logger.info("🔄 Attempting connection without SSL...")
-            conn = psycopg2.connect(
-                host=DB_CONFIG["host"],
-                database=DB_CONFIG["database"],
-                user=DB_CONFIG["user"],
-                password=DB_CONFIG["password"],
-                port=DB_CONFIG["port"],
-                connect_timeout=30
-            )
-            conn.set_client_encoding('UTF8')
-            logger.info("✅ Database connection successful (without SSL)")
-            return conn
-        except Exception as e2:
-            logger.error(f"❌ Database error without SSL: {e2}")
-            return None
+        return None
 
 def get_db():
     """Alias for get_db_connection"""
@@ -120,7 +82,7 @@ def get_db():
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# ==================== HELPER FUNCTIONS ====================
+# ==================== REST OF THE CODE (KEEP AS IS) ====================
 
 def clean_text(text):
     if text is None:
@@ -139,7 +101,6 @@ def fix_hindi_text(text):
     return text
 
 def safe_filename(name):
-    """Convert filename to safe ASCII for HTTP headers"""
     safe_name = unicodedata.normalize('NFKD', name).encode('ascii', 'ignore').decode('ascii')
     safe_name = re.sub(r'[^a-zA-Z0-9_-]', '_', safe_name)
     safe_name = re.sub(r'_+', '_', safe_name)
@@ -149,7 +110,6 @@ def safe_filename(name):
     return safe_name
 
 def format_phone(phone):
-    """Format phone number - remove decimals and convert to string"""
     if phone is None:
         return '-'
     try:
@@ -172,7 +132,6 @@ def round_amount(amount):
     return round(amount)
 
 def get_reason_label(reason_value):
-    """Convert reason value to display label"""
     reason_map = {
         'plowing': '🌾 बखरनी',
         'harrowing': '🚜 प्लाउ',
@@ -184,7 +143,6 @@ def get_reason_label(reason_value):
     return reason_map.get(reason_value, reason_value)
 
 def calculate_duration(start_time, stop_time):
-    """Calculate duration from time strings"""
     try:
         if hasattr(start_time, 'hour'):
             start_hour, start_minute = start_time.hour, start_time.minute
@@ -203,7 +161,6 @@ def calculate_duration(start_time, stop_time):
 # ==================== PAYMENT FUNCTIONS ====================
 
 def get_payment_history(farmer_name):
-    """Get payment history for a farmer"""
     conn = get_db_connection()
     if not conn:
         return []
@@ -237,7 +194,6 @@ def get_payment_history(farmer_name):
 # ==================== STATISTICS FUNCTIONS ====================
 
 def get_diesel_stats():
-    """Get diesel purchase statistics"""
     conn = get_db()
     if not conn:
         return {'total_entries': 0, 'total_amount': 0, 'total_liters': 0}
@@ -265,7 +221,6 @@ def get_diesel_stats():
         return {'total_entries': 0, 'total_amount': 0, 'total_liters': 0}
 
 def get_tractor_stats():
-    """Get daily tractor statistics"""
     conn = get_db()
     if not conn:
         return {'total_entries': 0, 'total_amount': 0, 'balance_amount': 0, 'unpaid_count': 0}
@@ -298,7 +253,6 @@ def get_tractor_stats():
         return {'total_entries': 0, 'total_amount': 0, 'balance_amount': 0, 'unpaid_count': 0}
 
 def get_operation_stats():
-    """Get tractor operation statistics"""
     conn = get_db()
     if not conn:
         return {'total_entries': 0, 'total_amount': 0, 'total_crops': 0}
@@ -331,7 +285,6 @@ def get_operation_stats():
 # ==================== DIESEL FUNCTIONS ====================
 
 def get_all_purchases():
-    """Fetch all diesel purchases"""
     conn = get_db_connection()
     if not conn:
         logger.error("❌ No database connection")
@@ -357,7 +310,6 @@ def get_all_purchases():
         return []
 
 def get_summary():
-    """Get summary statistics for diesel"""
     conn = get_db_connection()
     if not conn:
         return {}
@@ -488,7 +440,6 @@ def update_purchase(sl_no, purchase_date, amount, rate, product, bill_image_path
 # ==================== DAILY TRACTOR FUNCTIONS ====================
 
 def get_daily_tractor_entries(show_full=True, farmer_name=None):
-    """Get daily tractor entries with optional filtering"""
     conn = get_db()
     if not conn:
         logger.error("No database connection")
@@ -526,7 +477,6 @@ def get_daily_tractor_entries(show_full=True, farmer_name=None):
         
         result = []
         for entry in entries:
-            # Convert Decimal to float for numerical fields
             entry_dict = {
                 'sl_no': entry['sl_no'],
                 's_date': entry['s_date'],
@@ -552,7 +502,6 @@ def get_daily_tractor_entries(show_full=True, farmer_name=None):
         return []
 
 def get_farmer_names():
-    """Get distinct farmer names"""
     conn = get_db_connection()
     if not conn:
         return []
@@ -574,7 +523,6 @@ def get_farmer_names():
         conn.close()
 
 def get_farmer_totals(farmer_name):
-    """Get total amounts for a farmer - returns floats"""
     conn = get_db_connection()
     if not conn:
         return 0.0, 0.0, 0.0
@@ -588,7 +536,6 @@ def get_farmer_totals(farmer_name):
         """, (farmer_name,))
         totals = cur.fetchone()
         if totals:
-            # Convert Decimal to float
             return float(totals[0] or 0), float(totals[1] or 0), float(totals[2] or 0)
         return 0.0, 0.0, 0.0
     except Exception as e:
@@ -598,10 +545,7 @@ def get_farmer_totals(farmer_name):
         cur.close()
         conn.close()
 
-# ==================== TRACTOR OPERATION FUNCTIONS ====================
-
 def get_tractor_operation_entries():
-    """Get all tractor operation entries"""
     conn = get_db()
     if not conn:
         logger.error("No database connection")
@@ -640,22 +584,14 @@ def get_tractor_operation_entries():
 # ==================== HTML GENERATION ====================
 
 def generate_tractor_report_html(farmer_name, rows, total_amount, advance_amount, balance_amount, unpaid_balance, show_full):
-    """Generate HTML for tractor report with payment details"""
     report_type = "FULL STATEMENT" if show_full else "UNPAID RECORDS"
     report_id = f"TR{datetime.now().strftime('%Y%m%d%H%M%S')}"
     current_date = datetime.now().strftime('%d %B %Y at %I:%M %p')
     
-    # Get payment history
     payments = get_payment_history(farmer_name)
-    
-    # Calculate total payments
     total_payments = len(payments)
     total_paid_amount = sum(float(p[2] or 0) for p in payments)
-    
-    # Round amounts
     rounded_total = round_amount(total_amount)
-    
-    # Calculate balance correctly: Balance = Total Amount - Total Advance
     calculated_balance = total_amount - advance_amount
     
     html = f'''<!DOCTYPE html>
@@ -960,7 +896,6 @@ def generate_tractor_report_html(farmer_name, rows, total_amount, advance_amount
         <tbody>'''
         
         for idx, row in enumerate(rows, 1):
-            # Handle different row formats
             if isinstance(row, dict):
                 date_str = row['s_date'].strftime('%d-%m-%Y') if row['s_date'] else ''
                 start_time = row['start_time'].strftime('%H:%M') if row['start_time'] else ''
@@ -975,7 +910,6 @@ def generate_tractor_report_html(farmer_name, rows, total_amount, advance_amount
                 phone = format_phone(row.get('phone'))
                 total_time = row.get('duration', '')
             else:
-                # Tuple format
                 date_str = row[0].strftime('%d-%m-%Y') if row[0] else ''
                 start_time = row[1].strftime('%H:%M') if row[1] else ''
                 stop_time = row[2].strftime('%H:%M') if row[2] else ''
@@ -1016,7 +950,6 @@ def generate_tractor_report_html(farmer_name, rows, total_amount, advance_amount
         </tbody>
     </table>'''
         
-        # Add note explaining totals
         html += f'''
     <div class="advance-note">
         * Balance Amount = Total Amount - Total Advance = ₹{total_amount:,.2f} - ₹{advance_amount:,.2f} = ₹{calculated_balance:,.2f}
@@ -1028,7 +961,6 @@ def generate_tractor_report_html(farmer_name, rows, total_amount, advance_amount
         <p>No records available for this farmer</p>
     </div>'''
     
-    # Payment History Section
     html += '''
     <div class="payment-history">
         <h3>📋 PAYMENT HISTORY</h3>'''
@@ -1056,7 +988,6 @@ def generate_tractor_report_html(farmer_name, rows, total_amount, advance_amount
             trans_id = p[4] or 'N/A'
             notes = p[5] or ''
             
-            # Method badge
             method_badge = f'<span class="badge badge-{method.lower()}">{method}</span>'
             
             html += f'''
@@ -1073,7 +1004,6 @@ def generate_tractor_report_html(farmer_name, rows, total_amount, advance_amount
             </tbody>
         </table>'''
         
-        # Payment Summary
         html += f'''
         <div class="payment-summary">
             <div><strong>Total Payments:</strong> {total_payments}</div>
@@ -1106,7 +1036,6 @@ def generate_tractor_report_html(farmer_name, rows, total_amount, advance_amount
 # ==================== DATABASE INITIALIZATION ====================
 
 def init_db():
-    """Initialize all database tables"""
     conn = get_db()
     if not conn:
         logger.error("❌ Failed to connect to database - tables not created")
@@ -1116,7 +1045,6 @@ def init_db():
         cursor = conn.cursor()
         logger.info("🔧 Creating database tables...")
         
-        # Create daily_tractor table with all fields
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS daily_tractor (
                 sl_no SERIAL PRIMARY KEY,
@@ -1139,7 +1067,6 @@ def init_db():
         ''')
         logger.info("✅ daily_tractor table created")
         
-        # Create payment_transactions table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS payment_transactions (
                 id SERIAL PRIMARY KEY,
@@ -1154,7 +1081,6 @@ def init_db():
         ''')
         logger.info("✅ payment_transactions table created")
         
-        # Create tractor_operations table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS tractor_operations (
                 id SERIAL PRIMARY KEY,
@@ -1170,7 +1096,6 @@ def init_db():
         ''')
         logger.info("✅ tractor_operations table created")
         
-        # Create batayidar table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS batayidar (
                 id SERIAL PRIMARY KEY,
@@ -1180,7 +1105,6 @@ def init_db():
         ''')
         logger.info("✅ batayidar table created")
         
-        # Create crop table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS crop (
                 id SERIAL PRIMARY KEY,
@@ -1190,7 +1114,6 @@ def init_db():
         ''')
         logger.info("✅ crop table created")
         
-        # Create diesel_purchase table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS diesel_purchase (
                 sl_no SERIAL PRIMARY KEY,
@@ -1208,7 +1131,6 @@ def init_db():
         conn.commit()
         logger.info("✅ All database tables initialized successfully!")
         
-        # Add sample data if tables are empty
         cursor.execute("SELECT COUNT(*) FROM diesel_purchase")
         count = cursor.fetchone()[0]
         if count == 0:
@@ -1261,7 +1183,6 @@ def init_db():
 
 @app.route('/')
 def index():
-    """Main menu / Home page with statistics"""
     diesel_stats = get_diesel_stats()
     tractor_stats = get_tractor_stats()
     operation_stats = get_operation_stats()
@@ -1274,11 +1195,8 @@ def index():
                          upi_name=UPI_NAME,
                          now=datetime.now())
 
-# ==================== DIESEL ROUTES ====================
-
 @app.route('/diesel')
 def diesel_index():
-    """Diesel purchase page - List all purchases"""
     purchases = get_all_purchases()
     summary = get_summary()
     
@@ -1318,7 +1236,6 @@ def add_purchase_route():
             else:
                 flash('❌ Failed to add purchase.', 'danger')
             
-            # Stay on the same form page
             return redirect(url_for('add_purchase_route'))
             
         except ValueError:
@@ -1328,7 +1245,6 @@ def add_purchase_route():
         
         return redirect(url_for('add_purchase_route'))
     
-    # GET request - Show the form
     purchases = get_all_purchases()
     return render_template('diesel_add.html', 
                          edit_mode=False, 
@@ -1376,7 +1292,6 @@ def edit_purchase_route(sl_no):
             else:
                 flash('❌ Failed to update purchase.', 'danger')
             
-            # Stay on the same edit form
             return redirect(url_for('edit_purchase_route', sl_no=sl_no))
             
         except ValueError:
@@ -1401,16 +1316,11 @@ def edit_purchase_route(sl_no):
 
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
-    """Serve uploaded files"""
-    # Security: Prevent directory traversal
     filename = secure_filename(filename)
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
-# ==================== DAILY TRACTOR ROUTES ====================
-
 @app.route('/daily_tractor')
 def daily_tractor_form():
-    """Daily Tractor Entry form - Add new records"""
     reason_options = [
         ('plowing', '🌾 बखरनी'),
         ('harrowing', '🚜 प्लाउ'),
@@ -1420,13 +1330,9 @@ def daily_tractor_form():
         ('other', '📋 अन्य')
     ]
     
-    # Get farmer names for dropdown
     farmer_names = get_farmer_names()
-    
-    # Get all entries for display
     entries = get_daily_tractor_entries(True)
     
-    # Calculate totals
     total_amount = 0.0
     advance_amount = 0.0
     balance_amount = 0.0
@@ -1453,14 +1359,11 @@ def daily_tractor_form():
 
 @app.route('/daily_tractor_report')
 def daily_tractor_report():
-    """Daily Tractor Report page - shows full statement with filtering"""
     selected_farmer = request.args.get("farmer_name", "")
     show_full = request.args.get("show_full_statement", "true") == "true"
     
-    # Get farmer names for dropdown
     farmer_names = get_farmer_names()
     
-    # Initialize variables
     rows = []
     total_amount = 0.0
     advance_amount = 0.0
@@ -1470,19 +1373,16 @@ def daily_tractor_report():
     payment_history = []
     
     if selected_farmer:
-        # Get entries for selected farmer
         rows = get_daily_tractor_entries(show_full, selected_farmer)
         total_amount, advance_amount, balance_amount = get_farmer_totals(selected_farmer)
         payment_history = get_payment_history(selected_farmer)
         
-        # Calculate paid/unpaid counts
         for entry in rows:
             if entry.get('paid', False):
                 paid_records += 1
             else:
                 unpaid_records += 1
     else:
-        # Get all entries
         rows = get_daily_tractor_entries(True)
         for entry in rows:
             total_amount += float(entry.get('amount', 0))
@@ -1493,7 +1393,6 @@ def daily_tractor_report():
             else:
                 unpaid_records += 1
     
-    # Calculate balance
     calculated_balance = total_amount - advance_amount
     
     return render_template('daily_tractor_report.html',
@@ -1532,7 +1431,6 @@ def insert_daily_tractor():
             rate = float(request.form['rate'])
             reason = request.form['reason']
             
-            # Validate phone number (10 digits)
             if not phone or len(phone) != 10 or not phone.isdigit():
                 flash('कृपया 10 अंकों का सही फोन नंबर दर्ज करें!', 'error')
                 return redirect(url_for('daily_tractor_form'))
@@ -1551,8 +1449,6 @@ def insert_daily_tractor():
         except Exception as e:
             flash(f'Error: {str(e)}', 'error')
             return redirect(url_for('daily_tractor_form'))
-
-# ==================== PAYMENT ROUTES ====================
 
 @app.route("/submit_cash_payment", methods=["POST"])
 def submit_cash_payment():
@@ -1760,11 +1656,8 @@ def submit_upi_payment():
         logger.error(f"Error in UPI payment: {e}")
         return jsonify({"success": False, "error": str(e)})
 
-# ==================== REPORT ROUTES ====================
-
 @app.route("/download_tractor_report_pdf", methods=["GET"])
 def download_tractor_report_pdf():
-    """Show tractor report with print option"""
     try:
         farmer_name = request.args.get("farmer_name", "")
         show_full = request.args.get("full_statement", "false") == "true"
@@ -1772,7 +1665,6 @@ def download_tractor_report_pdf():
         if not farmer_name:
             return "No farmer selected", 400
         
-        # Get data
         conn = get_db_connection()
         if not conn:
             return "Database connection failed"
@@ -1807,7 +1699,6 @@ def download_tractor_report_pdf():
             cur.close()
             conn.close()
         
-        # Generate HTML with calculated balance
         html_content = generate_tractor_report_html(farmer_name, rows, total_amount, advance_amount, calculated_balance, calculated_balance, show_full)
         return html_content
             
@@ -1861,8 +1752,6 @@ def generate_payment_advice():
     </body>
     </html>
     '''
-
-# ==================== TRACTOR OPERATION ROUTES ====================
 
 @app.route('/tractor_operation')
 def tractor_operation_form():
@@ -1946,11 +1835,8 @@ def insert_tractor_operation():
             flash(f'Error: {str(e)}', 'error')
             return redirect(url_for('tractor_operation_form'))
 
-# ==================== DEBUG ROUTES ====================
-
 @app.route('/debug-simple')
 def debug_simple():
-    """Simple debug route"""
     try:
         conn = get_db_connection()
         if not conn:
@@ -1967,12 +1853,10 @@ def debug_simple():
 
 @app.route('/api/farmers')
 def api_farmers():
-    """API endpoint to get farmer names"""
     return jsonify(get_farmer_names())
 
 @app.route('/api/farmer_totals')
 def api_farmer_totals():
-    """API endpoint to get farmer totals"""
     farmer_name = request.args.get("farmer_name", "")
     if not farmer_name:
         return jsonify({"error": "No farmer name provided"}), 400
@@ -1987,7 +1871,6 @@ def api_farmer_totals():
 # ==================== MAIN ====================
 
 if __name__ == '__main__':
-    # Initialize database tables
     logger.info("🚀 Starting application...")
     init_db()
     
