@@ -25,7 +25,6 @@ app.secret_key = os.environ.get("SECRET_KEY", "tractor-secret-key-2026")
 # ==================== CONFIGURATION ====================
 
 # Render PostgreSQL Internal Connection String
-# Get this from: Render Dashboard -> PostgreSQL -> Your Database -> Connections -> Internal Connection String
 DATABASE_URL = "postgresql://agriculture_user:KSHdZQQWea1X6C2DomBqWTzKBYAXFzFM@dpg-d93818mh2hms73ce41ag-a.oregon-postgres.render.com:5432/agriculture"
 
 logger.info(f"✅ Using DATABASE_URL for connection")
@@ -51,52 +50,31 @@ payment_confirmations = {}
 # ==================== DATABASE FUNCTIONS - FINAL WORKING VERSION ====================
 
 def get_db_connection():
-    """Get database connection - FINAL WORKING VERSION"""
+    """Get database connection - FINAL WORKING VERSION for Render"""
     try:
         import urllib.parse
         parsed = urllib.parse.urlparse(DATABASE_URL)
         
-        # Build connection parameters
-        conn_params = {
-            'host': parsed.hostname,
-            'database': parsed.path.lstrip('/'),
-            'user': parsed.username,
-            'password': parsed.password,
-            'port': parsed.port or 5432,
-            'sslmode': 'require',
-            'connect_timeout': 30,
-            'keepalives': 1,
-            'keepalives_idle': 5,
-            'keepalives_interval': 2,
-            'keepalives_count': 2,
-            'target_session_attrs': 'read-write'
-        }
-        
-        conn = psycopg2.connect(**conn_params)
+        # Try with sslmode='disable' - works with Render's internal network
+        conn = psycopg2.connect(
+            host=parsed.hostname,
+            database=parsed.path.lstrip('/'),
+            user=parsed.username,
+            password=parsed.password,
+            port=parsed.port or 5432,
+            sslmode='disable',
+            connect_timeout=30,
+            keepalives=1,
+            keepalives_idle=5,
+            keepalives_interval=2,
+            keepalives_count=2
+        )
         conn.set_client_encoding('UTF8')
-        logger.info("✅ Database connection successful")
+        logger.info("✅ Database connection successful (SSL disabled)")
         return conn
     except Exception as e:
-        logger.error(f"❌ Database error (require): {e}")
-        # Try with sslmode=allow
-        try:
-            conn_params['sslmode'] = 'allow'
-            conn = psycopg2.connect(**conn_params)
-            conn.set_client_encoding('UTF8')
-            logger.info("✅ Database connection successful (sslmode=allow)")
-            return conn
-        except Exception as e2:
-            logger.error(f"❌ Database error (allow): {e2}")
-            # Try with sslmode=prefer
-            try:
-                conn_params['sslmode'] = 'prefer'
-                conn = psycopg2.connect(**conn_params)
-                conn.set_client_encoding('UTF8')
-                logger.info("✅ Database connection successful (sslmode=prefer)")
-                return conn
-            except Exception as e3:
-                logger.error(f"❌ All connection attempts failed: {e3}")
-                return None
+        logger.error(f"❌ Database error: {e}")
+        return None
 
 def get_db():
     """Alias for get_db_connection"""
