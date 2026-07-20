@@ -24,13 +24,14 @@ app.secret_key = os.environ.get("SECRET_KEY", "tractor-secret-key-2026")
 
 # ==================== CONFIGURATION ====================
 
-# Database Configuration - Read from environment variables
+# Database Configuration - HARDCODED for Render PostgreSQL
+# IMPORTANT: Use "agriculture_user" (with 'e') not "agriclture_user"
 DB_CONFIG = {
-    "host": os.environ.get("DB_HOST", "dpg-d93818mh2hms73ce41ag-a.oregon-postgres.render.com"),
-    "database": os.environ.get("DB_NAME", "agriculture"),
-    "user": os.environ.get("DB_USER", "agriculture_user"),
-    "password": os.environ.get("DB_PASSWORD", "KSHdZQQWea1X6C2DomBqWTzKBYAXFzFM"),
-    "port": os.environ.get("DB_PORT", "5432"),
+    "host": "dpg-d93818mh2hms73ce41ag-a.oregon-postgres.render.com",
+    "database": "agriculture",
+    "user": "agriculture_user",  # ← CORRECT - with 'e'
+    "password": "KSHdZQQWea1X6C2DomBqWTzKBYAXFzFM",
+    "port": "5432",
     "sslmode": "require"
 }
 
@@ -65,7 +66,7 @@ def get_db_connection():
             user=DB_CONFIG["user"],
             password=DB_CONFIG["password"],
             port=DB_CONFIG["port"],
-            sslmode="require"
+            sslmode=DB_CONFIG["sslmode"]
         )
         conn.set_client_encoding('UTF8')
         logger.info("✅ Database connection successful")
