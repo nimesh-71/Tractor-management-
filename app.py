@@ -25,7 +25,7 @@ app.secret_key = os.environ.get("SECRET_KEY", "tractor-secret-key-2026")
 # ==================== CONFIGURATION ====================
 
 # Render PostgreSQL Internal Connection String
-DATABASE_URL = "postgresql://agriculture_user:KSHdZQQWea1X6C2DomBqWTzKBYAXFzFM@dpg-d93818mh2hms73ce41ag-a.oregon-postgres.render.com:5432/agriculture"
+DATABASE_URL = "postgresql://agriculture_user:KSHdZQQWea1X6C2DomBqWTzKBYAXFzFM@dpg-d93818mh2hms73ce41ag-a.oregon-postgres.render.com:5432/agriculture?sslmode=require"
 
 logger.info(f"✅ Using DATABASE_URL for connection")
 
@@ -47,22 +47,33 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # Store payment confirmations
 payment_confirmations = {}
 
-# ==================== DATABASE FUNCTIONS - FINAL WORKING VERSION ====================
+# ==================== DATABASE FUNCTIONS - FIXED FOR SSL ====================
 
 def get_db_connection():
-    """Get database connection - FINAL WORKING VERSION for Render"""
+    """Get database connection - FIXED with SSL support for Render"""
     try:
         import urllib.parse
         parsed = urllib.parse.urlparse(DATABASE_URL)
         
-        # Try with sslmode='disable' - works with Render's internal network
+        # Extract SSL mode from URL if present, otherwise default to 'require'
+        ssl_mode = 'require'
+        if parsed.query:
+            query_params = dict(urllib.parse.parse_qsl(parsed.query))
+            if 'sslmode' in query_params:
+                ssl_mode = query_params['sslmode']
+        
+        # For local development, you can set ENVIRONMENT=development
+        if os.environ.get('ENVIRONMENT') == 'development':
+            ssl_mode = 'disable'
+            logger.info("🔧 Development mode: SSL disabled")
+        
         conn = psycopg2.connect(
             host=parsed.hostname,
             database=parsed.path.lstrip('/'),
             user=parsed.username,
             password=parsed.password,
             port=parsed.port or 5432,
-            sslmode='disable',
+            sslmode=ssl_mode,
             connect_timeout=30,
             keepalives=1,
             keepalives_idle=5,
@@ -70,7 +81,7 @@ def get_db_connection():
             keepalives_count=2
         )
         conn.set_client_encoding('UTF8')
-        logger.info("✅ Database connection successful (SSL disabled)")
+        logger.info(f"✅ Database connection successful (SSL: {ssl_mode})")
         return conn
     except Exception as e:
         logger.error(f"❌ Database error: {e}")
