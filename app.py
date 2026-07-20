@@ -24,7 +24,7 @@ app.secret_key = os.environ.get("SECRET_KEY", "tractor-secret-key-2026")
 
 # ==================== CONFIGURATION ====================
 
-# Use DATABASE_URL from environment (now correctly set)
+# Use DATABASE_URL from environment
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
 
 if DATABASE_URL:
@@ -39,7 +39,7 @@ DB_CONFIG = {
     "user": os.environ.get("DB_USER", "agriculture_user"),
     "password": os.environ.get("DB_PASSWORD", "KSHdZQQWea1X6C2DomBqWTzKBYAXFzFM"),
     "port": os.environ.get("DB_PORT", "5432"),
-    "sslmode": "require"
+    "sslmode": "disable"  # ← DISABLE SSL
 }
 
 logger.info(f"✅ Database: {DB_CONFIG['database']} on {DB_CONFIG['host']} as user {DB_CONFIG['user']}")
@@ -65,24 +65,24 @@ payment_confirmations = {}
 # ==================== DATABASE FUNCTIONS ====================
 
 def get_db_connection():
-    """Get database connection"""
+    """Get database connection - DISABLE SSL for Render"""
     try:
-        # Try using DATABASE_URL first
         if DATABASE_URL:
-            conn = psycopg2.connect(DATABASE_URL, connect_timeout=30)
+            # Remove any existing sslmode and use disable
+            base_url = DATABASE_URL.split('?')[0]
+            conn = psycopg2.connect(base_url + '?sslmode=disable', connect_timeout=30)
         else:
-            # Fallback to individual variables
             conn = psycopg2.connect(
                 host=DB_CONFIG["host"],
                 database=DB_CONFIG["database"],
                 user=DB_CONFIG["user"],
                 password=DB_CONFIG["password"],
                 port=DB_CONFIG["port"],
-                sslmode="require",
+                sslmode="disable",
                 connect_timeout=30
             )
         conn.set_client_encoding('UTF8')
-        logger.info("✅ Database connection successful")
+        logger.info("✅ Database connection successful (SSL disabled)")
         return conn
     except Exception as e:
         logger.error(f"❌ Database error: {e}")
