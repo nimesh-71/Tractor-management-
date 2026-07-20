@@ -22,19 +22,22 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "tractor-secret-key-2026")
 
-# ==================== CONFIGURATION ====================
+# ==================== CONFIGURATION - FIXED DATABASE ====================
 
-# Database Configuration - Using individual parameters
-DB_HOST = "dpg-d93818nh2hms73ce41ag-a.oregon-postgres.render.com"
+# Database Configuration - Using explicit values since DATABASE_URL is corrupted
+DB_HOST = "dpg-d93818mh2hms73ce41ag-a.oregon-postgres.render.com"
 DB_PORT = "5432"
 DB_NAME = "agriculture"
 DB_USER = "agriculture_user"
-DB_PASSWORD = "KSHdZQ0Wea1X6C2DomBqWTzKBYAXFzFM"
+DB_PASSWORD = "KSHdZQQWea1X6C2DomBqWTzKBYAXFzFM"
 
-# Also try using DATABASE_URL from environment if available
-DATABASE_URL = os.environ.get("DATABASE_URL", f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}")
+# Build the correct DATABASE_URL programmatically
+DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
+# Log connection info (hiding password)
+safe_url = DATABASE_URL.replace(DB_PASSWORD, "***")
 logger.info(f"✅ Using database: {DB_HOST}:{DB_PORT}/{DB_NAME}")
+logger.info(f"✅ Connection string: {safe_url}")
 
 # UPI Configuration
 UPI_ID = os.environ.get("UPI_ID", "nimeshab@ybl")
@@ -54,125 +57,37 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # Store payment confirmations
 payment_confirmations = {}
 
-# ==================== DATABASE CONNECTION - MULTI-METHOD ====================
+# ==================== DATABASE CONNECTION ====================
 
 def get_db_connection():
-    """Get database connection - Try multiple methods"""
-    
-    # Method 1: Try without SSL (might work on internal network)
+    """Get database connection - Fixed version"""
     try:
-        conn = psycopg2.connect(
-            host=DB_HOST,
-            database=DB_NAME,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            port=DB_PORT,
-            sslmode='disable',
-            connect_timeout=10
-        )
-        conn.set_client_encoding('UTF8')
-        logger.info("✅ Database connection successful (SSL: disabled)")
-        return conn
-    except Exception as e:
-        logger.warning(f"Method 1 (SSL disabled) failed: {e}")
-    
-    # Method 2: Try with 'allow' (try SSL, fallback to non-SSL)
-    try:
-        conn = psycopg2.connect(
-            host=DB_HOST,
-            database=DB_NAME,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            port=DB_PORT,
-            sslmode='allow',
-            connect_timeout=10
-        )
-        conn.set_client_encoding('UTF8')
-        logger.info("✅ Database connection successful (SSL: allow)")
-        return conn
-    except Exception as e:
-        logger.warning(f"Method 2 (SSL allow) failed: {e}")
-    
-    # Method 3: Try with 'prefer' (prefer SSL, but allow non-SSL)
-    try:
-        conn = psycopg2.connect(
-            host=DB_HOST,
-            database=DB_NAME,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            port=DB_PORT,
-            sslmode='prefer',
-            connect_timeout=10
-        )
-        conn.set_client_encoding('UTF8')
-        logger.info("✅ Database connection successful (SSL: prefer)")
-        return conn
-    except Exception as e:
-        logger.warning(f"Method 3 (SSL prefer) failed: {e}")
-    
-    # Method 4: Try with 'require' (SSL required)
-    try:
-        conn = psycopg2.connect(
-            host=DB_HOST,
-            database=DB_NAME,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            port=DB_PORT,
-            sslmode='require',
-            connect_timeout=10
-        )
-        conn.set_client_encoding('UTF8')
-        logger.info("✅ Database connection successful (SSL: require)")
-        return conn
-    except Exception as e:
-        logger.warning(f"Method 4 (SSL require) failed: {e}")
-    
-    # Method 5: Try with connection string directly
-    try:
+        # Method 1: Try with the built DATABASE_URL
         conn = psycopg2.connect(DATABASE_URL)
         conn.set_client_encoding('UTF8')
-        logger.info("✅ Database connection successful (direct string)")
+        logger.info("✅ Database connection successful (SSL enabled)")
         return conn
     except Exception as e:
-        logger.warning(f"Method 5 (direct string) failed: {e}")
-    
-    # Method 6: Try with 'require' and no certificate verification
-    try:
-        conn = psycopg2.connect(
-            host=DB_HOST,
-            database=DB_NAME,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            port=DB_PORT,
-            sslmode='require',
-            sslrootcert=None,
-            connect_timeout=10
-        )
-        conn.set_client_encoding('UTF8')
-        logger.info("✅ Database connection successful (SSL: require, no cert verify)")
-        return conn
-    except Exception as e:
-        logger.warning(f"Method 6 (SSL require no cert) failed: {e}")
-    
-    # Method 7: Try with no SSL mode specified (let libpq decide)
-    try:
-        conn = psycopg2.connect(
-            host=DB_HOST,
-            database=DB_NAME,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            port=DB_PORT,
-            connect_timeout=10
-        )
-        conn.set_client_encoding('UTF8')
-        logger.info("✅ Database connection successful (no SSL mode)")
-        return conn
-    except Exception as e:
-        logger.warning(f"Method 7 (no SSL mode) failed: {e}")
-    
-    # All methods failed
-    logger.error("❌ All connection methods failed")
-    return None
+        logger.error(f"❌ Database error with DATABASE_URL: {e}")
+        
+        # Method 2: Try with explicit parameters
+        try:
+            conn = psycopg2.connect(
+                host=DB_HOST,
+                database=DB_NAME,
+                user=DB_USER,
+                password=DB_PASSWORD,
+                port=DB_PORT,
+                sslmode='require',
+                connect_timeout=30
+            )
+            conn.set_client_encoding('UTF8')
+            logger.info("✅ Database connection successful (SSL: require)")
+            return conn
+        except Exception as e2:
+            logger.error(f"❌ Database error with explicit params: {e2}")
+            logger.error(traceback.format_exc())
+            return None
 
 def get_db():
     """Alias for get_db_connection"""
@@ -1952,125 +1867,6 @@ def debug_simple():
     except Exception as e:
         return f"❌ Error: {str(e)}"
 
-# ==================== TEST DATABASE CONNECTION ENDPOINT ====================
-
-@app.route('/test-db')
-def test_db():
-    """Test database connection with different methods"""
-    results = []
-    
-    # Test 1: No SSL
-    try:
-        conn = psycopg2.connect(
-            host=DB_HOST,
-            database=DB_NAME,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            port=DB_PORT,
-            sslmode='disable',
-            connect_timeout=5
-        )
-        conn.close()
-        results.append("✅ SSL disabled: SUCCESS")
-    except Exception as e:
-        results.append(f"❌ SSL disabled: {str(e)}")
-    
-    # Test 2: SSL require
-    try:
-        conn = psycopg2.connect(
-            host=DB_HOST,
-            database=DB_NAME,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            port=DB_PORT,
-            sslmode='require',
-            connect_timeout=5
-        )
-        conn.close()
-        results.append("✅ SSL require: SUCCESS")
-    except Exception as e:
-        results.append(f"❌ SSL require: {str(e)}")
-    
-    # Test 3: SSL allow
-    try:
-        conn = psycopg2.connect(
-            host=DB_HOST,
-            database=DB_NAME,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            port=DB_PORT,
-            sslmode='allow',
-            connect_timeout=5
-        )
-        conn.close()
-        results.append("✅ SSL allow: SUCCESS")
-    except Exception as e:
-        results.append(f"❌ SSL allow: {str(e)}")
-    
-    # Test 4: SSL prefer
-    try:
-        conn = psycopg2.connect(
-            host=DB_HOST,
-            database=DB_NAME,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            port=DB_PORT,
-            sslmode='prefer',
-            connect_timeout=5
-        )
-        conn.close()
-        results.append("✅ SSL prefer: SUCCESS")
-    except Exception as e:
-        results.append(f"❌ SSL prefer: {str(e)}")
-    
-    # Test 5: No SSL mode specified
-    try:
-        conn = psycopg2.connect(
-            host=DB_HOST,
-            database=DB_NAME,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            port=DB_PORT,
-            connect_timeout=5
-        )
-        conn.close()
-        results.append("✅ No SSL mode: SUCCESS")
-    except Exception as e:
-        results.append(f"❌ No SSL mode: {str(e)}")
-    
-    # Test 6: Using connection string
-    try:
-        conn_str = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-        conn = psycopg2.connect(conn_str, connect_timeout=5)
-        conn.close()
-        results.append("✅ Connection string: SUCCESS")
-    except Exception as e:
-        results.append(f"❌ Connection string: {str(e)}")
-    
-    # Test 7: Using DATABASE_URL from environment
-    try:
-        conn = psycopg2.connect(DATABASE_URL, connect_timeout=5)
-        conn.close()
-        results.append("✅ DATABASE_URL: SUCCESS")
-    except Exception as e:
-        results.append(f"❌ DATABASE_URL: {str(e)}")
-    
-    html = "<h2>Database Connection Test Results</h2>"
-    html += "<div style='font-family: monospace;'>"
-    for result in results:
-        if "✅" in result:
-            html += f"<div style='color: green; padding: 5px;'>{result}</div>"
-        else:
-            html += f"<div style='color: red; padding: 5px;'>{result}</div>"
-    html += "</div>"
-    html += f"<br><strong>Database:</strong> {DB_HOST}:{DB_PORT}/{DB_NAME}"
-    html += f"<br><strong>User:</strong> {DB_USER}"
-    html += f"<br><strong>DATABASE_URL:</strong> {DATABASE_URL[:50]}..."
-    
-    return html
-
-# ==================== API ROUTES ====================
-
 @app.route('/api/farmers')
 def api_farmers():
     return jsonify(get_farmer_names())
@@ -2107,7 +1903,6 @@ if __name__ == '__main__':
     print(f"  - http://0.0.0.0:{port}/daily_tractor_report (Daily Tractor Report)")
     print(f"  - http://0.0.0.0:{port}/tractor_operation (Tractor Operation)")
     print(f"  - http://0.0.0.0:{port}/download_tractor_report_pdf (Generate Reports)")
-    print(f"  - http://0.0.0.0:{port}/test-db (Test Database Connection)")
     print(f"\n💰 UPI ID: {UPI_ID}")
     print("="*70 + "\n")
     
