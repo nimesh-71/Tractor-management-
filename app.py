@@ -24,23 +24,12 @@ app.secret_key = os.environ.get("SECRET_KEY", "tractor-secret-key-2026")
 
 # ==================== CONFIGURATION ====================
 
-# HARDCODED Database Configuration for Render PostgreSQL
-# CORRECT VALUES:
-# Database: agriculture (with 'e')
-# User: agriculture_user (with 'e')
-# Password: KSHdZQQWea1X6C2DomBqWTzKBYAXFzFM
-# Host: dpg-d93818mh2hms73ce41ag-a.oregon-postgres.render.com
+# Use Render's Internal Connection String directly
+# IMPORTANT: Replace this with your actual Internal Connection String from Render
+# Format: postgresql://user:password@host:port/database
+DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://agriculture_user:KSHdZQQWea1X6C2DomBqWTzKBYAXFzFM@dpg-d93818mh2hms73ce41ag-a.oregon-postgres.render.com:5432/agriculture")
 
-DB_CONFIG = {
-    "host": "dpg-d93818mh2hms73ce41ag-a.oregon-postgres.render.com",
-    "database": "agriculture",
-    "user": "agriculture_user",
-    "password": "KSHdZQQWea1X6C2DomBqWTzKBYAXFzFM",
-    "port": "5432",
-    "sslmode": "require"
-}
-
-logger.info(f"✅ Database Config: Host={DB_CONFIG['host']}, Database={DB_CONFIG['database']}, User={DB_CONFIG['user']}")
+logger.info(f"✅ Using DATABASE_URL for connection")
 
 # UPI Configuration
 UPI_ID = os.environ.get("UPI_ID", "nimeshab@ybl")
@@ -63,39 +52,16 @@ payment_confirmations = {}
 # ==================== DATABASE FUNCTIONS ====================
 
 def get_db_connection():
-    """Get database connection - Simplified working version"""
+    """Get database connection using DATABASE_URL"""
     try:
-        # Direct connection with SSL
-        conn = psycopg2.connect(
-            host=DB_CONFIG["host"],
-            database=DB_CONFIG["database"],
-            user=DB_CONFIG["user"],
-            password=DB_CONFIG["password"],
-            port=DB_CONFIG["port"],
-            sslmode="require",
-            connect_timeout=30
-        )
+        # Use the DATABASE_URL directly
+        conn = psycopg2.connect(DATABASE_URL, connect_timeout=30)
         conn.set_client_encoding('UTF8')
         logger.info("✅ Database connection successful")
         return conn
     except Exception as e:
         logger.error(f"❌ Database error: {e}")
-        # Try without SSL as fallback
-        try:
-            conn = psycopg2.connect(
-                host=DB_CONFIG["host"],
-                database=DB_CONFIG["database"],
-                user=DB_CONFIG["user"],
-                password=DB_CONFIG["password"],
-                port=DB_CONFIG["port"],
-                connect_timeout=30
-            )
-            conn.set_client_encoding('UTF8')
-            logger.info("✅ Database connection successful (without SSL)")
-            return conn
-        except Exception as e2:
-            logger.error(f"❌ Database error (no SSL): {e2}")
-            return None
+        return None
 
 def get_db():
     """Alias for get_db_connection"""
@@ -1902,7 +1868,6 @@ if __name__ == '__main__':
     print("\n" + "="*70)
     print("🚜 UNIFIED AGRICULTURE MANAGEMENT SYSTEM")
     print("="*70)
-    print(f"📊 Database: {DB_CONFIG['database']} on {DB_CONFIG['host']}")
     print(f"🌐 Server: http://0.0.0.0:{port}")
     print("\n📍 Available Routes:")
     print(f"  - http://0.0.0.0:{port}/ (Main Menu)")
