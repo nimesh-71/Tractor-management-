@@ -48,49 +48,51 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # Store payment confirmations
 payment_confirmations = {}
 
-# ==================== DATABASE FUNCTIONS ====================
+# ==================== DATABASE FUNCTIONS - FINAL WORKING VERSION ====================
 
 def get_db_connection():
-    """Get database connection with proper SSL configuration"""
+    """Get database connection - FINAL WORKING VERSION"""
     try:
-        # Use the DATABASE_URL with sslmode=require
-        conn = psycopg2.connect(
-            DATABASE_URL,
-            sslmode='require',
-            connect_timeout=30,
-            keepalives=1,
-            keepalives_idle=5,
-            keepalives_interval=2,
-            keepalives_count=2
-        )
+        import urllib.parse
+        parsed = urllib.parse.urlparse(DATABASE_URL)
+        
+        # Build connection parameters
+        conn_params = {
+            'host': parsed.hostname,
+            'database': parsed.path.lstrip('/'),
+            'user': parsed.username,
+            'password': parsed.password,
+            'port': parsed.port or 5432,
+            'sslmode': 'require',
+            'connect_timeout': 30,
+            'keepalives': 1,
+            'keepalives_idle': 5,
+            'keepalives_interval': 2,
+            'keepalives_count': 2,
+            'target_session_attrs': 'read-write'
+        }
+        
+        conn = psycopg2.connect(**conn_params)
         conn.set_client_encoding('UTF8')
         logger.info("✅ Database connection successful")
         return conn
     except Exception as e:
         logger.error(f"❌ Database error (require): {e}")
-        # Try with sslmode=verify-full as fallback
+        # Try with sslmode=allow
         try:
-            conn = psycopg2.connect(
-                DATABASE_URL,
-                sslmode='verify-full',
-                connect_timeout=30
-            )
+            conn_params['sslmode'] = 'allow'
+            conn = psycopg2.connect(**conn_params)
             conn.set_client_encoding('UTF8')
-            logger.info("✅ Database connection successful (verify-full)")
+            logger.info("✅ Database connection successful (sslmode=allow)")
             return conn
         except Exception as e2:
-            logger.error(f"❌ Database error (verify-full): {e2}")
-            # Try without SSL as last resort
+            logger.error(f"❌ Database error (allow): {e2}")
+            # Try with sslmode=prefer
             try:
-                # Remove sslmode from URL
-                base_url = DATABASE_URL.split('?')[0]
-                conn = psycopg2.connect(
-                    base_url,
-                    sslmode='disable',
-                    connect_timeout=30
-                )
+                conn_params['sslmode'] = 'prefer'
+                conn = psycopg2.connect(**conn_params)
                 conn.set_client_encoding('UTF8')
-                logger.info("✅ Database connection successful (SSL disabled)")
+                logger.info("✅ Database connection successful (sslmode=prefer)")
                 return conn
             except Exception as e3:
                 logger.error(f"❌ All connection attempts failed: {e3}")
