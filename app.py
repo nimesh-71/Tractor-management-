@@ -24,15 +24,19 @@ app.secret_key = os.environ.get("SECRET_KEY", "tractor-secret-key-2026")
 
 # ==================== CONFIGURATION ====================
 
-# Database Configuration - Using Render PostgreSQL environment variables
+# Database Configuration - Using Render PostgreSQL
+# Your database credentials from Render
 DB_CONFIG = {
     "host": os.environ.get("DB_HOST", "dpg-d93818mh2hms73ce4lag-a.oregon-postgres.render.com"),
     "database": os.environ.get("DB_NAME", "agriculture"),
-    "user": os.environ.get("DB_USER", "agriculture_user"),
+    "user": os.environ.get("DB_USER", "agriculture_user"),  # ← Correct username with 'e'
     "password": os.environ.get("DB_PASSWORD", "KSHdZQQWea1X6C2DomBqWTzKBYAXFzFM"),
     "port": os.environ.get("DB_PORT", "5432"),
     "sslmode": "require"
 }
+
+# Also try DATABASE_URL if available
+DATABASE_URL = os.environ.get("DATABASE_URL", "")
 
 logger.info(f"✅ Database Config: Host={DB_CONFIG['host']}, Database={DB_CONFIG['database']}, User={DB_CONFIG['user']}")
 
@@ -59,16 +63,27 @@ payment_confirmations = {}
 def get_db_connection():
     """Get database connection with SSL support"""
     try:
-        conn = psycopg2.connect(
-            host=DB_CONFIG["host"],
-            database=DB_CONFIG["database"],
-            user=DB_CONFIG["user"],
-            password=DB_CONFIG["password"],
-            port=DB_CONFIG["port"],
-            sslmode="require"
-        )
+        # Try DATABASE_URL first if available
+        if DATABASE_URL:
+            db_url = DATABASE_URL
+            if "sslmode" not in db_url:
+                if "?" in db_url:
+                    db_url += "&sslmode=require"
+                else:
+                    db_url += "?sslmode=require"
+            conn = psycopg2.connect(db_url)
+            logger.info("✅ Connected using DATABASE_URL")
+        else:
+            conn = psycopg2.connect(
+                host=DB_CONFIG["host"],
+                database=DB_CONFIG["database"],
+                user=DB_CONFIG["user"],
+                password=DB_CONFIG["password"],
+                port=DB_CONFIG["port"],
+                sslmode="require"
+            )
+            logger.info("✅ Connected using DB_CONFIG")
         conn.set_client_encoding('UTF8')
-        logger.info("✅ Database connection successful")
         return conn
     except Exception as e:
         logger.error(f"❌ Database error: {e}")
