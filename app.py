@@ -24,12 +24,25 @@ app.secret_key = os.environ.get("SECRET_KEY", "tractor-secret-key-2026")
 
 # ==================== CONFIGURATION ====================
 
-# Use Render's Internal Connection String directly
-# IMPORTANT: Replace this with your actual Internal Connection String from Render
-# Format: postgresql://user:password@host:port/database
-DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://agriculture_user:KSHdZQQWea1X6C2DomBqWTzKBYAXFzFM@dpg-d93818mh2hms73ce41ag-a.oregon-postgres.render.com:5432/agriculture")
+# Use DATABASE_URL from environment (now correctly set)
+DATABASE_URL = os.environ.get("DATABASE_URL", "")
 
-logger.info(f"✅ Using DATABASE_URL for connection")
+if DATABASE_URL:
+    logger.info("✅ Using DATABASE_URL for connection")
+else:
+    logger.info("⚠️ DATABASE_URL not found, using individual variables")
+
+# Database config for fallback
+DB_CONFIG = {
+    "host": os.environ.get("DB_HOST", "dpg-d93818mh2hms73ce41ag-a.oregon-postgres.render.com"),
+    "database": os.environ.get("DB_NAME", "agriculture"),
+    "user": os.environ.get("DB_USER", "agriculture_user"),
+    "password": os.environ.get("DB_PASSWORD", "KSHdZQQWea1X6C2DomBqWTzKBYAXFzFM"),
+    "port": os.environ.get("DB_PORT", "5432"),
+    "sslmode": "require"
+}
+
+logger.info(f"✅ Database: {DB_CONFIG['database']} on {DB_CONFIG['host']} as user {DB_CONFIG['user']}")
 
 # UPI Configuration
 UPI_ID = os.environ.get("UPI_ID", "nimeshab@ybl")
@@ -52,10 +65,22 @@ payment_confirmations = {}
 # ==================== DATABASE FUNCTIONS ====================
 
 def get_db_connection():
-    """Get database connection using DATABASE_URL"""
+    """Get database connection"""
     try:
-        # Use the DATABASE_URL directly
-        conn = psycopg2.connect(DATABASE_URL, connect_timeout=30)
+        # Try using DATABASE_URL first
+        if DATABASE_URL:
+            conn = psycopg2.connect(DATABASE_URL, connect_timeout=30)
+        else:
+            # Fallback to individual variables
+            conn = psycopg2.connect(
+                host=DB_CONFIG["host"],
+                database=DB_CONFIG["database"],
+                user=DB_CONFIG["user"],
+                password=DB_CONFIG["password"],
+                port=DB_CONFIG["port"],
+                sslmode="require",
+                connect_timeout=30
+            )
         conn.set_client_encoding('UTF8')
         logger.info("✅ Database connection successful")
         return conn
@@ -1868,6 +1893,7 @@ if __name__ == '__main__':
     print("\n" + "="*70)
     print("🚜 UNIFIED AGRICULTURE MANAGEMENT SYSTEM")
     print("="*70)
+    print(f"📊 Database: {DB_CONFIG['database']} on {DB_CONFIG['host']}")
     print(f"🌐 Server: http://0.0.0.0:{port}")
     print("\n📍 Available Routes:")
     print(f"  - http://0.0.0.0:{port}/ (Main Menu)")
