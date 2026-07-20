@@ -24,10 +24,19 @@ app.secret_key = os.environ.get("SECRET_KEY", "tractor-secret-key-2026")
 
 # ==================== CONFIGURATION ====================
 
-# Render PostgreSQL Internal Connection String
-DATABASE_URL = "postgresql://agriculture_user:KSHdZQQWea1X6C2DomBqWTzKBYAXFzFM@dpg-d93818mh2hms73ce41ag-a.oregon-postgres.render.com:5432/agriculture?sslmode=require"
+# CORRECTED Database URL for Render PostgreSQL
+# Note: Using individual parameters to avoid URL encoding issues
+DB_HOST = "dpg-d93818nh2hms73ce41ag-a.oregon-postgres.render.com"
+DB_PORT = "5432"
+DB_NAME = "agriculture"
+DB_USER = "agriculture_user"
+DB_PASSWORD = "KSHdZQ0Wea1X6C2DomBqWTzKBYAXFzFM"
 
-logger.info(f"✅ Using DATABASE_URL for connection")
+# Alternative: If you want to use DATABASE_URL (URL-encoded version)
+# The password has '&' which needs to be URL-encoded as %26
+# DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}?sslmode=require"
+
+logger.info(f"✅ Using database: {DB_HOST}:{DB_PORT}/{DB_NAME}")
 
 # UPI Configuration
 UPI_ID = os.environ.get("UPI_ID", "nimeshab@ybl")
@@ -50,30 +59,16 @@ payment_confirmations = {}
 # ==================== DATABASE FUNCTIONS - FIXED FOR SSL ====================
 
 def get_db_connection():
-    """Get database connection - FIXED with SSL support for Render"""
+    """Get database connection - Fixed for Render PostgreSQL"""
     try:
-        import urllib.parse
-        parsed = urllib.parse.urlparse(DATABASE_URL)
-        
-        # Extract SSL mode from URL if present, otherwise default to 'require'
-        ssl_mode = 'require'
-        if parsed.query:
-            query_params = dict(urllib.parse.parse_qsl(parsed.query))
-            if 'sslmode' in query_params:
-                ssl_mode = query_params['sslmode']
-        
-        # For local development, you can set ENVIRONMENT=development
-        if os.environ.get('ENVIRONMENT') == 'development':
-            ssl_mode = 'disable'
-            logger.info("🔧 Development mode: SSL disabled")
-        
+        # Connect using explicit parameters with SSL
         conn = psycopg2.connect(
-            host=parsed.hostname,
-            database=parsed.path.lstrip('/'),
-            user=parsed.username,
-            password=parsed.password,
-            port=parsed.port or 5432,
-            sslmode=ssl_mode,
+            host=DB_HOST,
+            database=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            port=DB_PORT,
+            sslmode='require',  # Render requires SSL
             connect_timeout=30,
             keepalives=1,
             keepalives_idle=5,
@@ -81,10 +76,11 @@ def get_db_connection():
             keepalives_count=2
         )
         conn.set_client_encoding('UTF8')
-        logger.info(f"✅ Database connection successful (SSL: {ssl_mode})")
+        logger.info("✅ Database connection successful (SSL enabled)")
         return conn
     except Exception as e:
         logger.error(f"❌ Database error: {e}")
+        logger.error(traceback.format_exc())
         return None
 
 def get_db():
