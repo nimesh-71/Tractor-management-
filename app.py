@@ -25,11 +25,10 @@ app.secret_key = os.environ.get("SECRET_KEY", "tractor-secret-key-2026")
 # ==================== CONFIGURATION ====================
 
 # HARDCODED Database Configuration for Render PostgreSQL
-# Use these exact values - they are correct for your Render database
 DB_CONFIG = {
     "host": "dpg-d93818mh2hms73ce41ag-a.oregon-postgres.render.com",
-    "database": "agriculture",           # ← CORRECT: with 'e'
-    "user": "agriculture_user",          # ← CORRECT: with 'e'
+    "database": "agriculture",
+    "user": "agriculture_user",
     "password": "KSHdZQQWea1X6C2DomBqWTzKBYAXFzFM",
     "port": "5432",
     "sslmode": "require"
@@ -58,7 +57,45 @@ payment_confirmations = {}
 # ==================== DATABASE FUNCTIONS ====================
 
 def get_db_connection():
-    """Get database connection with SSL support"""
+    """Get database connection - try multiple SSL modes"""
+    ssl_modes = ['require', 'prefer', 'verify-ca', 'verify-full', 'disable']
+    
+    # First try with DATABASE_URL if available
+    DATABASE_URL = os.environ.get("DATABASE_URL", "")
+    if DATABASE_URL:
+        try:
+            if 'sslmode' not in DATABASE_URL:
+                if '?' in DATABASE_URL:
+                    DATABASE_URL += '&sslmode=require'
+                else:
+                    DATABASE_URL += '?sslmode=require'
+            conn = psycopg2.connect(DATABASE_URL, connect_timeout=30)
+            conn.set_client_encoding('UTF8')
+            logger.info("✅ Database connection successful (using DATABASE_URL)")
+            return conn
+        except Exception as e:
+            logger.warning(f"⚠️ DATABASE_URL connection failed: {e}")
+    
+    # Try different SSL modes
+    for mode in ssl_modes:
+        try:
+            conn = psycopg2.connect(
+                host=DB_CONFIG["host"],
+                database=DB_CONFIG["database"],
+                user=DB_CONFIG["user"],
+                password=DB_CONFIG["password"],
+                port=DB_CONFIG["port"],
+                sslmode=mode,
+                connect_timeout=30
+            )
+            conn.set_client_encoding('UTF8')
+            logger.info(f"✅ Database connection successful (sslmode={mode})")
+            return conn
+        except Exception as e:
+            logger.warning(f"⚠️ sslmode={mode} failed: {e}")
+            continue
+    
+    # If all SSL modes fail, try without SSL
     try:
         conn = psycopg2.connect(
             host=DB_CONFIG["host"],
@@ -66,14 +103,13 @@ def get_db_connection():
             user=DB_CONFIG["user"],
             password=DB_CONFIG["password"],
             port=DB_CONFIG["port"],
-            sslmode=DB_CONFIG["sslmode"],
             connect_timeout=30
         )
         conn.set_client_encoding('UTF8')
-        logger.info("✅ Database connection successful")
+        logger.info("✅ Database connection successful (without SSL)")
         return conn
     except Exception as e:
-        logger.error(f"❌ Database error: {e}")
+        logger.error(f"❌ All connection attempts failed: {e}")
         return None
 
 def get_db():
