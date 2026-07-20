@@ -24,14 +24,14 @@ app.secret_key = os.environ.get("SECRET_KEY", "tractor-secret-key-2026")
 
 # ==================== CONFIGURATION ====================
 
-# Database Configuration - Try without SSL for internal connection
+# Database Configuration
 DB_HOST = "dpg-d93818mh2hms73ce41ag-a.oregon-postgres.render.com"
 DB_PORT = "5432"
 DB_NAME = "agriculture"
 DB_USER = "agriculture_user"
 DB_PASSWORD = "KSHdZQQWea1X6C2DomBqWTzKBYAXFzFM"
 
-# Build DATABASE_URL without SSL parameters
+# Build DATABASE_URL
 DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 # Log connection info (hiding password)
@@ -57,12 +57,12 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # Store payment confirmations
 payment_confirmations = {}
 
-# ==================== DATABASE CONNECTION - TRY WITHOUT SSL ====================
+# ==================== DATABASE CONNECTION - FIXED SSL ====================
 
 def get_db_connection():
-    """Get database connection - Try without SSL first"""
+    """Get database connection with SSL"""
     
-    # Method 1: Try without SSL (for internal connections)
+    # Method 1: Try with sslmode='require' and sslrootcert=None
     try:
         conn = psycopg2.connect(
             host=DB_HOST,
@@ -70,16 +70,17 @@ def get_db_connection():
             user=DB_USER,
             password=DB_PASSWORD,
             port=DB_PORT,
-            sslmode='disable',  # Disable SSL for internal connection
+            sslmode='require',
+            sslrootcert=None,  # Don't verify certificate
             connect_timeout=30
         )
         conn.set_client_encoding('UTF8')
-        logger.info("✅ Database connection successful (SSL disabled)")
+        logger.info("✅ Database connection successful (SSL: require, no cert)")
         return conn
     except Exception as e:
-        logger.warning(f"SSL disabled failed: {e}")
+        logger.warning(f"SSL require no cert failed: {e}")
     
-    # Method 2: Try with 'allow' (try SSL, fallback to non-SSL)
+    # Method 2: Try with sslmode='verify-full' and no cert
     try:
         conn = psycopg2.connect(
             host=DB_HOST,
@@ -87,43 +88,29 @@ def get_db_connection():
             user=DB_USER,
             password=DB_PASSWORD,
             port=DB_PORT,
-            sslmode='allow',
+            sslmode='verify-full',
+            sslrootcert=None,
             connect_timeout=30
         )
         conn.set_client_encoding('UTF8')
-        logger.info("✅ Database connection successful (SSL: allow)")
+        logger.info("✅ Database connection successful (SSL: verify-full)")
         return conn
     except Exception as e:
-        logger.warning(f"SSL allow failed: {e}")
+        logger.warning(f"SSL verify-full failed: {e}")
     
-    # Method 3: Try with 'prefer'
+    # Method 3: Try with connection string and sslmode in URL
     try:
-        conn = psycopg2.connect(
-            host=DB_HOST,
-            database=DB_NAME,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            port=DB_PORT,
-            sslmode='prefer',
-            connect_timeout=30
-        )
+        url_with_ssl = f"{DATABASE_URL}?sslmode=require&sslrootcert=no-verify"
+        conn = psycopg2.connect(url_with_ssl)
         conn.set_client_encoding('UTF8')
-        logger.info("✅ Database connection successful (SSL: prefer)")
+        logger.info("✅ Database connection successful (URL with SSL)")
         return conn
     except Exception as e:
-        logger.warning(f"SSL prefer failed: {e}")
+        logger.warning(f"URL with SSL failed: {e}")
     
-    # Method 4: Try with DATABASE_URL directly
+    # Method 4: Try with sslmode='require' and explicit SSL certificate
     try:
-        conn = psycopg2.connect(DATABASE_URL)
-        conn.set_client_encoding('UTF8')
-        logger.info("✅ Database connection successful (direct URL)")
-        return conn
-    except Exception as e:
-        logger.warning(f"Direct URL failed: {e}")
-    
-    # Method 5: Try with SSL required (last resort)
-    try:
+        import ssl
         conn = psycopg2.connect(
             host=DB_HOST,
             database=DB_NAME,
@@ -134,10 +121,55 @@ def get_db_connection():
             connect_timeout=30
         )
         conn.set_client_encoding('UTF8')
-        logger.info("✅ Database connection successful (SSL: require)")
+        logger.info("✅ Database connection successful (SSL: require default)")
         return conn
     except Exception as e:
-        logger.error(f"SSL require failed: {e}")
+        logger.warning(f"SSL require default failed: {e}")
+    
+    # Method 5: Try using DATABASE_URL with sslmode in the connection string
+    try:
+        # Use the external URL format that Render provides
+        external_url = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}?sslmode=require"
+        conn = psycopg2.connect(external_url)
+        conn.set_client_encoding('UTF8')
+        logger.info("✅ Database connection successful (external URL)")
+        return conn
+    except Exception as e:
+        logger.warning(f"External URL failed: {e}")
+    
+    # Method 6: Try with psycopg2's default SSL settings
+    try:
+        # Let psycopg2 handle SSL automatically
+        conn = psycopg2.connect(
+            host=DB_HOST,
+            database=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            port=DB_PORT,
+            connect_timeout=30
+        )
+        conn.set_client_encoding('UTF8')
+        logger.info("✅ Database connection successful (auto SSL)")
+        return conn
+    except Exception as e:
+        logger.warning(f"Auto SSL failed: {e}")
+    
+    # Method 7: Try with sslmode='verify-ca'
+    try:
+        conn = psycopg2.connect(
+            host=DB_HOST,
+            database=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            port=DB_PORT,
+            sslmode='verify-ca',
+            connect_timeout=30
+        )
+        conn.set_client_encoding('UTF8')
+        logger.info("✅ Database connection successful (SSL: verify-ca)")
+        return conn
+    except Exception as e:
+        logger.warning(f"SSL verify-ca failed: {e}")
     
     # All methods failed
     logger.error("❌ All connection methods failed")
