@@ -22,16 +22,16 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "tractor-secret-key-2026")
 
-# ==================== CONFIGURATION - FIXED DATABASE ====================
+# ==================== CONFIGURATION ====================
 
-# Database Configuration - Using explicit values since DATABASE_URL is corrupted
+# Database Configuration - Try without SSL for internal connection
 DB_HOST = "dpg-d93818mh2hms73ce41ag-a.oregon-postgres.render.com"
 DB_PORT = "5432"
 DB_NAME = "agriculture"
 DB_USER = "agriculture_user"
 DB_PASSWORD = "KSHdZQQWea1X6C2DomBqWTzKBYAXFzFM"
 
-# Build the correct DATABASE_URL programmatically
+# Build DATABASE_URL without SSL parameters
 DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 # Log connection info (hiding password)
@@ -57,37 +57,91 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # Store payment confirmations
 payment_confirmations = {}
 
-# ==================== DATABASE CONNECTION ====================
+# ==================== DATABASE CONNECTION - TRY WITHOUT SSL ====================
 
 def get_db_connection():
-    """Get database connection - Fixed version"""
+    """Get database connection - Try without SSL first"""
+    
+    # Method 1: Try without SSL (for internal connections)
     try:
-        # Method 1: Try with the built DATABASE_URL
-        conn = psycopg2.connect(DATABASE_URL)
+        conn = psycopg2.connect(
+            host=DB_HOST,
+            database=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            port=DB_PORT,
+            sslmode='disable',  # Disable SSL for internal connection
+            connect_timeout=30
+        )
         conn.set_client_encoding('UTF8')
-        logger.info("✅ Database connection successful (SSL enabled)")
+        logger.info("✅ Database connection successful (SSL disabled)")
         return conn
     except Exception as e:
-        logger.error(f"❌ Database error with DATABASE_URL: {e}")
-        
-        # Method 2: Try with explicit parameters
-        try:
-            conn = psycopg2.connect(
-                host=DB_HOST,
-                database=DB_NAME,
-                user=DB_USER,
-                password=DB_PASSWORD,
-                port=DB_PORT,
-                sslmode='require',
-                connect_timeout=30
-            )
-            conn.set_client_encoding('UTF8')
-            logger.info("✅ Database connection successful (SSL: require)")
-            return conn
-        except Exception as e2:
-            logger.error(f"❌ Database error with explicit params: {e2}")
-            logger.error(traceback.format_exc())
-            return None
+        logger.warning(f"SSL disabled failed: {e}")
+    
+    # Method 2: Try with 'allow' (try SSL, fallback to non-SSL)
+    try:
+        conn = psycopg2.connect(
+            host=DB_HOST,
+            database=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            port=DB_PORT,
+            sslmode='allow',
+            connect_timeout=30
+        )
+        conn.set_client_encoding('UTF8')
+        logger.info("✅ Database connection successful (SSL: allow)")
+        return conn
+    except Exception as e:
+        logger.warning(f"SSL allow failed: {e}")
+    
+    # Method 3: Try with 'prefer'
+    try:
+        conn = psycopg2.connect(
+            host=DB_HOST,
+            database=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            port=DB_PORT,
+            sslmode='prefer',
+            connect_timeout=30
+        )
+        conn.set_client_encoding('UTF8')
+        logger.info("✅ Database connection successful (SSL: prefer)")
+        return conn
+    except Exception as e:
+        logger.warning(f"SSL prefer failed: {e}")
+    
+    # Method 4: Try with DATABASE_URL directly
+    try:
+        conn = psycopg2.connect(DATABASE_URL)
+        conn.set_client_encoding('UTF8')
+        logger.info("✅ Database connection successful (direct URL)")
+        return conn
+    except Exception as e:
+        logger.warning(f"Direct URL failed: {e}")
+    
+    # Method 5: Try with SSL required (last resort)
+    try:
+        conn = psycopg2.connect(
+            host=DB_HOST,
+            database=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            port=DB_PORT,
+            sslmode='require',
+            connect_timeout=30
+        )
+        conn.set_client_encoding('UTF8')
+        logger.info("✅ Database connection successful (SSL: require)")
+        return conn
+    except Exception as e:
+        logger.error(f"SSL require failed: {e}")
+    
+    # All methods failed
+    logger.error("❌ All connection methods failed")
+    return None
 
 def get_db():
     """Alias for get_db_connection"""
