@@ -20,36 +20,19 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "your-secret-key-here-change-in-production")
+app.secret_key = os.environ.get("SECRET_KEY", "tractor-secret-key-2026")
 
 # ==================== CONFIGURATION ====================
 
-# Database Configuration - Using Render PostgreSQL
-# Your Render database credentials
+# Database Configuration - Using Render PostgreSQL environment variables
 DB_CONFIG = {
-    "host": os.environ.get("DB_HOST", "dpg-cv5tcbdsi52c73atf77g-a.oregon-postgres.render.com"),
+    "host": os.environ.get("DB_HOST", "dpg-d93818mh2hms73ce4lag-a.oregon-postgres.render.com"),
     "database": os.environ.get("DB_NAME", "agriculture"),
     "user": os.environ.get("DB_USER", "agriculture_user"),
-    "password": os.environ.get("DB_PASSWORD", "Anukriti@20071971"),
-    "port": os.environ.get("DB_PORT", "5432")
+    "password": os.environ.get("DB_PASSWORD", "KSHdZQQWea1X6C2DomBqWTzKBYAXFzFM"),
+    "port": os.environ.get("DB_PORT", "5432"),
+    "sslmode": "require"
 }
-
-# Alternative: Use DATABASE_URL if provided
-DATABASE_URL = os.environ.get("DATABASE_URL", "")
-if DATABASE_URL:
-    try:
-        result = urlparse(DATABASE_URL)
-        DB_CONFIG = {
-            "host": result.hostname,
-            "database": result.path.lstrip('/'),
-            "user": result.username,
-            "password": result.password,
-            "port": result.port or 5432
-        }
-        logger.info(f"✅ Using production database from DATABASE_URL: {result.hostname}")
-    except Exception as e:
-        logger.error(f"Error parsing DATABASE_URL: {e}")
-        logger.info("✅ Using fallback database configuration")
 
 logger.info(f"✅ Database Config: Host={DB_CONFIG['host']}, Database={DB_CONFIG['database']}, User={DB_CONFIG['user']}")
 
@@ -74,9 +57,16 @@ payment_confirmations = {}
 # ==================== DATABASE FUNCTIONS ====================
 
 def get_db_connection():
-    """Get database connection"""
+    """Get database connection with SSL support"""
     try:
-        conn = psycopg2.connect(**DB_CONFIG)
+        conn = psycopg2.connect(
+            host=DB_CONFIG["host"],
+            database=DB_CONFIG["database"],
+            user=DB_CONFIG["user"],
+            password=DB_CONFIG["password"],
+            port=DB_CONFIG["port"],
+            sslmode="require"
+        )
         conn.set_client_encoding('UTF8')
         logger.info("✅ Database connection successful")
         return conn
@@ -375,7 +365,8 @@ def add_purchase(purchase_date, amount, rate, product, bill_image_path=None):
         return True
     except Exception as e:
         logger.error(f"❌ Error adding purchase: {e}")
-        conn.rollback()
+        if conn:
+            conn.rollback()
         return False
 
 def delete_purchase_by_id(sl_no):
