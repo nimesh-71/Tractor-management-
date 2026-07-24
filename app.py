@@ -22,17 +22,18 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "tractor-secret-key-2026")
 
-# ==================== CONFIGURATION - YOUR ACTUAL CREDENTIALS ====================
+# ==================== CONFIGURATION - CORRECT CREDENTIALS ====================
 
-# Database Configuration - Using your actual credentials
-DB_HOST_INTERNAL = "dpg-d93818mh2hms73ce4lag-a"  # Your internal hostname
-DB_HOST_EXTERNAL = "dpg-d93818mh2hms73ce4lag-a.oregon-postgres.render.com"
+# Database Configuration - Using the correct credentials from your screenshot
+DB_HOST_INTERNAL = "dpg-d93818mh2hms73ce41ag-a"
+DB_HOST_EXTERNAL = "dpg-d93818mh2hms73ce41ag-a.oregon-postgres.render.com"
 DB_PORT = "5432"
-DB_NAME = "agriclture"  # Your actual database name (misspelled)
-DB_USER = "agriclture_user"  # Your actual username (misspelled)
-DB_PASSWORD = "KSHdZQQWealX6C2DomBqWTzKBYAXFzFM"  # Your actual password (with 'l' not '1')
+DB_NAME = "agriculture"  # Correct: agriculture (not agriclture)
+DB_USER = "agriculture_user"  # Correct: agriculture_user (not agriclture_user)
+DB_PASSWORD = "KSHdZQQWea1X6C2DomBqWTzKBYAXFzFM"
 
-# Build connection strings
+# The password contains '&' so we need to URL-encode it for the connection string
+# Or better, use individual parameters to avoid URL encoding issues
 DATABASE_URL_INTERNAL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST_INTERNAL}:{DB_PORT}/{DB_NAME}"
 DATABASE_URL_EXTERNAL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST_EXTERNAL}:{DB_PORT}/{DB_NAME}"
 
@@ -62,9 +63,9 @@ payment_confirmations = {}
 # ==================== DATABASE CONNECTION ====================
 
 def get_db_connection():
-    """Get database connection using your actual credentials"""
+    """Get database connection - Using the correct credentials"""
     
-    # Method 1: Try internal host with SSL disabled (BEST for Render)
+    # Method 1: Internal host with SSL disabled (BEST for Render)
     try:
         conn = psycopg2.connect(
             host=DB_HOST_INTERNAL,
@@ -81,7 +82,7 @@ def get_db_connection():
     except Exception as e:
         logger.warning(f"Internal SSL disabled failed: {e}")
     
-    # Method 2: Try internal URL directly
+    # Method 2: Internal URL directly
     try:
         conn = psycopg2.connect(DATABASE_URL_INTERNAL)
         conn.set_client_encoding('UTF8')
@@ -90,7 +91,7 @@ def get_db_connection():
     except Exception as e:
         logger.warning(f"Internal URL failed: {e}")
     
-    # Method 3: Try external host with SSL disabled
+    # Method 3: External host with SSL disabled
     try:
         conn = psycopg2.connect(
             host=DB_HOST_EXTERNAL,
@@ -107,7 +108,7 @@ def get_db_connection():
     except Exception as e:
         logger.warning(f"External SSL disabled failed: {e}")
     
-    # Method 4: Try external URL
+    # Method 4: External URL
     try:
         conn = psycopg2.connect(DATABASE_URL_EXTERNAL)
         conn.set_client_encoding('UTF8')
@@ -116,7 +117,7 @@ def get_db_connection():
     except Exception as e:
         logger.warning(f"External URL failed: {e}")
     
-    # Method 5: Try external host with SSL require
+    # Method 5: External host with SSL require
     try:
         conn = psycopg2.connect(
             host=DB_HOST_EXTERNAL,
