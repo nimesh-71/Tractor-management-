@@ -34,10 +34,7 @@ DB_PASSWORD = "KSHdZQQWea1X6C2DomBqWTzKBYAXFzFM"
 # Build DATABASE_URL
 DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
-# Log connection info (hiding password)
-safe_url = DATABASE_URL.replace(DB_PASSWORD, "***")
 logger.info(f"✅ Using database: {DB_HOST}:{DB_PORT}/{DB_NAME}")
-logger.info(f"✅ Connection string: {safe_url}")
 
 # UPI Configuration
 UPI_ID = os.environ.get("UPI_ID", "nimeshab@ybl")
@@ -57,128 +54,85 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # Store payment confirmations
 payment_confirmations = {}
 
-# ==================== DATABASE CONNECTION - FINAL FIX ====================
+# ==================== DATABASE CONNECTION - SIMPLE FIX ====================
 
 def get_db_connection():
-    """Get database connection with proper SSL - FINAL FIX"""
+    """Get database connection - Simple approach that works"""
     
-    # Method 1: Try with sslmode='verify-full' and sslrootcert='system'
-    try:
-        conn = psycopg2.connect(
-            host=DB_HOST,
-            database=DB_NAME,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            port=DB_PORT,
-            sslmode='verify-full',
-            sslrootcert='system',
-            connect_timeout=30
-        )
-        conn.set_client_encoding('UTF8')
-        logger.info("✅ Database connection successful (SSL: verify-full, system cert)")
-        return conn
-    except Exception as e:
-        logger.warning(f"SSL verify-full system cert failed: {e}")
+    # Check if running on Render (has RENDER environment variable)
+    is_render = os.environ.get('RENDER', False)
     
-    # Method 2: Try with sslmode='verify-ca' and sslrootcert='system'
-    try:
-        conn = psycopg2.connect(
-            host=DB_HOST,
-            database=DB_NAME,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            port=DB_PORT,
-            sslmode='verify-ca',
-            sslrootcert='system',
-            connect_timeout=30
-        )
-        conn.set_client_encoding('UTF8')
-        logger.info("✅ Database connection successful (SSL: verify-ca, system cert)")
-        return conn
-    except Exception as e:
-        logger.warning(f"SSL verify-ca system cert failed: {e}")
-    
-    # Method 3: Try with sslmode='require' without sslrootcert
-    try:
-        conn = psycopg2.connect(
-            host=DB_HOST,
-            database=DB_NAME,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            port=DB_PORT,
-            sslmode='require',
-            connect_timeout=30
-        )
-        conn.set_client_encoding('UTF8')
-        logger.info("✅ Database connection successful (SSL: require)")
-        return conn
-    except Exception as e:
-        logger.warning(f"SSL require failed: {e}")
-    
-    # Method 4: Try with sslmode='require' and sslrootcert=None
-    try:
-        conn = psycopg2.connect(
-            host=DB_HOST,
-            database=DB_NAME,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            port=DB_PORT,
-            sslmode='require',
-            sslrootcert=None,
-            connect_timeout=30
-        )
-        conn.set_client_encoding('UTF8')
-        logger.info("✅ Database connection successful (SSL: require, no cert)")
-        return conn
-    except Exception as e:
-        logger.warning(f"SSL require no cert failed: {e}")
-    
-    # Method 5: Try with sslmode='verify-full' without sslrootcert
-    try:
-        conn = psycopg2.connect(
-            host=DB_HOST,
-            database=DB_NAME,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            port=DB_PORT,
-            sslmode='verify-full',
-            connect_timeout=30
-        )
-        conn.set_client_encoding('UTF8')
-        logger.info("✅ Database connection successful (SSL: verify-full)")
-        return conn
-    except Exception as e:
-        logger.warning(f"SSL verify-full failed: {e}")
-    
-    # Method 6: Try with DATABASE_URL directly
-    try:
-        conn = psycopg2.connect(DATABASE_URL)
-        conn.set_client_encoding('UTF8')
-        logger.info("✅ Database connection successful (direct URL)")
-        return conn
-    except Exception as e:
-        logger.warning(f"Direct URL failed: {e}")
-    
-    # Method 7: Try with sslmode='allow'
-    try:
-        conn = psycopg2.connect(
-            host=DB_HOST,
-            database=DB_NAME,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            port=DB_PORT,
-            sslmode='allow',
-            connect_timeout=30
-        )
-        conn.set_client_encoding('UTF8')
-        logger.info("✅ Database connection successful (SSL: allow)")
-        return conn
-    except Exception as e:
-        logger.warning(f"SSL allow failed: {e}")
-    
-    # All methods failed
-    logger.error("❌ All connection methods failed")
-    return None
+    if is_render:
+        # On Render - use SSL with system certificates
+        try:
+            conn = psycopg2.connect(
+                host=DB_HOST,
+                database=DB_NAME,
+                user=DB_USER,
+                password=DB_PASSWORD,
+                port=DB_PORT,
+                sslmode='require',
+                sslrootcert='system',
+                connect_timeout=30
+            )
+            conn.set_client_encoding('UTF8')
+            logger.info("✅ Database connection successful (Render - SSL)")
+            return conn
+        except Exception as e:
+            logger.warning(f"Render SSL connection failed: {e}")
+            # Fallback to no SSL
+            try:
+                conn = psycopg2.connect(
+                    host=DB_HOST,
+                    database=DB_NAME,
+                    user=DB_USER,
+                    password=DB_PASSWORD,
+                    port=DB_PORT,
+                    sslmode='disable',
+                    connect_timeout=30
+                )
+                conn.set_client_encoding('UTF8')
+                logger.info("✅ Database connection successful (Render - no SSL)")
+                return conn
+            except Exception as e2:
+                logger.error(f"Render connection failed: {e2}")
+                return None
+    else:
+        # Running locally - try SSL first, then fallback to no SSL
+        try:
+            # Try SSL with no certificate verification (for local testing)
+            conn = psycopg2.connect(
+                host=DB_HOST,
+                database=DB_NAME,
+                user=DB_USER,
+                password=DB_PASSWORD,
+                port=DB_PORT,
+                sslmode='require',
+                sslrootcert=None,  # No certificate verification for local
+                connect_timeout=30
+            )
+            conn.set_client_encoding('UTF8')
+            logger.info("✅ Database connection successful (Local - SSL with no cert)")
+            return conn
+        except Exception as e:
+            logger.warning(f"Local SSL connection failed: {e}")
+            # Try without SSL (for local testing)
+            try:
+                conn = psycopg2.connect(
+                    host=DB_HOST,
+                    database=DB_NAME,
+                    user=DB_USER,
+                    password=DB_PASSWORD,
+                    port=DB_PORT,
+                    sslmode='disable',
+                    connect_timeout=30
+                )
+                conn.set_client_encoding('UTF8')
+                logger.info("✅ Database connection successful (Local - no SSL)")
+                return conn
+            except Exception as e2:
+                logger.error(f"Local connection failed: {e2}")
+                return None
 
 def get_db():
     """Alias for get_db_connection"""
