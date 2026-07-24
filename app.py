@@ -32,8 +32,7 @@ DB_NAME = "agriculture"  # Correct: agriculture (not agriclture)
 DB_USER = "agriculture_user"  # Correct: agriculture_user (not agriclture_user)
 DB_PASSWORD = "KSHdZQQWea1X6C2DomBqWTzKBYAXFzFM"
 
-# The password contains '&' so we need to URL-encode it for the connection string
-# Or better, use individual parameters to avoid URL encoding issues
+# Build connection strings
 DATABASE_URL_INTERNAL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST_INTERNAL}:{DB_PORT}/{DB_NAME}"
 DATABASE_URL_EXTERNAL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST_EXTERNAL}:{DB_PORT}/{DB_NAME}"
 
