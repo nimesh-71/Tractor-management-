@@ -22,19 +22,24 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "tractor-secret-key-2026")
 
-# ==================== CONFIGURATION ====================
+# ==================== CONFIGURATION - YOUR ACTUAL CREDENTIALS ====================
 
-# Database Configuration
-DB_HOST = "dpg-d93818mh2hms73ce41ag-a.oregon-postgres.render.com"
+# Database Configuration - Using your actual credentials
+DB_HOST_INTERNAL = "dpg-d93818mh2hms73ce4lag-a"  # Your internal hostname
+DB_HOST_EXTERNAL = "dpg-d93818mh2hms73ce4lag-a.oregon-postgres.render.com"
 DB_PORT = "5432"
-DB_NAME = "agriculture"
-DB_USER = "agriculture_user"
-DB_PASSWORD = "KSHdZQQWea1X6C2DomBqWTzKBYAXFzFM"
+DB_NAME = "agriclture"  # Your actual database name (misspelled)
+DB_USER = "agriclture_user"  # Your actual username (misspelled)
+DB_PASSWORD = "KSHdZQQWealX6C2DomBqWTzKBYAXFzFM"  # Your actual password (with 'l' not '1')
 
-# Build DATABASE_URL
-DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+# Build connection strings
+DATABASE_URL_INTERNAL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST_INTERNAL}:{DB_PORT}/{DB_NAME}"
+DATABASE_URL_EXTERNAL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST_EXTERNAL}:{DB_PORT}/{DB_NAME}"
 
-logger.info(f"✅ Using database: {DB_HOST}:{DB_PORT}/{DB_NAME}")
+logger.info(f"✅ Using internal host: {DB_HOST_INTERNAL}")
+logger.info(f"✅ Using external host: {DB_HOST_EXTERNAL}")
+logger.info(f"✅ Database: {DB_NAME}")
+logger.info(f"✅ User: {DB_USER}")
 
 # UPI Configuration
 UPI_ID = os.environ.get("UPI_ID", "nimeshab@ybl")
@@ -54,84 +59,82 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # Store payment confirmations
 payment_confirmations = {}
 
-# ==================== DATABASE CONNECTION - FINAL RENDER FIX ====================
+# ==================== DATABASE CONNECTION ====================
 
 def get_db_connection():
-    """Get database connection - Works on both Render and local"""
+    """Get database connection using your actual credentials"""
     
-    # Check if running on Render (has RENDER environment variable)
-    is_render = os.environ.get('RENDER', False)
+    # Method 1: Try internal host with SSL disabled (BEST for Render)
+    try:
+        conn = psycopg2.connect(
+            host=DB_HOST_INTERNAL,
+            database=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            port=DB_PORT,
+            sslmode='disable',
+            connect_timeout=30
+        )
+        conn.set_client_encoding('UTF8')
+        logger.info("✅ Database connected (Internal, SSL disabled)")
+        return conn
+    except Exception as e:
+        logger.warning(f"Internal SSL disabled failed: {e}")
     
-    if is_render:
-        # On Render - use SSL with verify-full
-        try:
-            conn = psycopg2.connect(
-                host=DB_HOST,
-                database=DB_NAME,
-                user=DB_USER,
-                password=DB_PASSWORD,
-                port=DB_PORT,
-                sslmode='verify-full',
-                sslrootcert='system',
-                connect_timeout=30
-            )
-            conn.set_client_encoding('UTF8')
-            logger.info("✅ Database connection successful (Render - SSL verify-full)")
-            return conn
-        except Exception as e:
-            logger.warning(f"Render SSL verify-full failed: {e}")
-            # Fallback to require without sslrootcert
-            try:
-                conn = psycopg2.connect(
-                    host=DB_HOST,
-                    database=DB_NAME,
-                    user=DB_USER,
-                    password=DB_PASSWORD,
-                    port=DB_PORT,
-                    sslmode='require',
-                    connect_timeout=30
-                )
-                conn.set_client_encoding('UTF8')
-                logger.info("✅ Database connection successful (Render - SSL require)")
-                return conn
-            except Exception as e2:
-                logger.error(f"Render connection failed: {e2}")
-                return None
-    else:
-        # Running locally - try SSL with no cert verification first
-        try:
-            conn = psycopg2.connect(
-                host=DB_HOST,
-                database=DB_NAME,
-                user=DB_USER,
-                password=DB_PASSWORD,
-                port=DB_PORT,
-                sslmode='require',
-                sslrootcert=None,
-                connect_timeout=30
-            )
-            conn.set_client_encoding('UTF8')
-            logger.info("✅ Database connection successful (Local - SSL no cert)")
-            return conn
-        except Exception as e:
-            logger.warning(f"Local SSL connection failed: {e}")
-            # Try without SSL
-            try:
-                conn = psycopg2.connect(
-                    host=DB_HOST,
-                    database=DB_NAME,
-                    user=DB_USER,
-                    password=DB_PASSWORD,
-                    port=DB_PORT,
-                    sslmode='disable',
-                    connect_timeout=30
-                )
-                conn.set_client_encoding('UTF8')
-                logger.info("✅ Database connection successful (Local - no SSL)")
-                return conn
-            except Exception as e2:
-                logger.error(f"Local connection failed: {e2}")
-                return None
+    # Method 2: Try internal URL directly
+    try:
+        conn = psycopg2.connect(DATABASE_URL_INTERNAL)
+        conn.set_client_encoding('UTF8')
+        logger.info("✅ Database connected (Internal URL)")
+        return conn
+    except Exception as e:
+        logger.warning(f"Internal URL failed: {e}")
+    
+    # Method 3: Try external host with SSL disabled
+    try:
+        conn = psycopg2.connect(
+            host=DB_HOST_EXTERNAL,
+            database=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            port=DB_PORT,
+            sslmode='disable',
+            connect_timeout=30
+        )
+        conn.set_client_encoding('UTF8')
+        logger.info("✅ Database connected (External, SSL disabled)")
+        return conn
+    except Exception as e:
+        logger.warning(f"External SSL disabled failed: {e}")
+    
+    # Method 4: Try external URL
+    try:
+        conn = psycopg2.connect(DATABASE_URL_EXTERNAL)
+        conn.set_client_encoding('UTF8')
+        logger.info("✅ Database connected (External URL)")
+        return conn
+    except Exception as e:
+        logger.warning(f"External URL failed: {e}")
+    
+    # Method 5: Try external host with SSL require
+    try:
+        conn = psycopg2.connect(
+            host=DB_HOST_EXTERNAL,
+            database=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            port=DB_PORT,
+            sslmode='require',
+            connect_timeout=30
+        )
+        conn.set_client_encoding('UTF8')
+        logger.info("✅ Database connected (External, SSL require)")
+        return conn
+    except Exception as e:
+        logger.warning(f"External SSL require failed: {e}")
+    
+    logger.error("❌ All connection methods failed")
+    return None
 
 def get_db():
     """Alias for get_db_connection"""
