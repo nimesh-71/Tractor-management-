@@ -54,16 +54,16 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # Store payment confirmations
 payment_confirmations = {}
 
-# ==================== DATABASE CONNECTION - SIMPLE FIX ====================
+# ==================== DATABASE CONNECTION - FINAL RENDER FIX ====================
 
 def get_db_connection():
-    """Get database connection - Simple approach that works"""
+    """Get database connection - Works on both Render and local"""
     
     # Check if running on Render (has RENDER environment variable)
     is_render = os.environ.get('RENDER', False)
     
     if is_render:
-        # On Render - use SSL with system certificates
+        # On Render - use SSL with verify-full
         try:
             conn = psycopg2.connect(
                 host=DB_HOST,
@@ -71,16 +71,16 @@ def get_db_connection():
                 user=DB_USER,
                 password=DB_PASSWORD,
                 port=DB_PORT,
-                sslmode='require',
+                sslmode='verify-full',
                 sslrootcert='system',
                 connect_timeout=30
             )
             conn.set_client_encoding('UTF8')
-            logger.info("✅ Database connection successful (Render - SSL)")
+            logger.info("✅ Database connection successful (Render - SSL verify-full)")
             return conn
         except Exception as e:
-            logger.warning(f"Render SSL connection failed: {e}")
-            # Fallback to no SSL
+            logger.warning(f"Render SSL verify-full failed: {e}")
+            # Fallback to require without sslrootcert
             try:
                 conn = psycopg2.connect(
                     host=DB_HOST,
@@ -88,19 +88,18 @@ def get_db_connection():
                     user=DB_USER,
                     password=DB_PASSWORD,
                     port=DB_PORT,
-                    sslmode='disable',
+                    sslmode='require',
                     connect_timeout=30
                 )
                 conn.set_client_encoding('UTF8')
-                logger.info("✅ Database connection successful (Render - no SSL)")
+                logger.info("✅ Database connection successful (Render - SSL require)")
                 return conn
             except Exception as e2:
                 logger.error(f"Render connection failed: {e2}")
                 return None
     else:
-        # Running locally - try SSL first, then fallback to no SSL
+        # Running locally - try SSL with no cert verification first
         try:
-            # Try SSL with no certificate verification (for local testing)
             conn = psycopg2.connect(
                 host=DB_HOST,
                 database=DB_NAME,
@@ -108,15 +107,15 @@ def get_db_connection():
                 password=DB_PASSWORD,
                 port=DB_PORT,
                 sslmode='require',
-                sslrootcert=None,  # No certificate verification for local
+                sslrootcert=None,
                 connect_timeout=30
             )
             conn.set_client_encoding('UTF8')
-            logger.info("✅ Database connection successful (Local - SSL with no cert)")
+            logger.info("✅ Database connection successful (Local - SSL no cert)")
             return conn
         except Exception as e:
             logger.warning(f"Local SSL connection failed: {e}")
-            # Try without SSL (for local testing)
+            # Try without SSL
             try:
                 conn = psycopg2.connect(
                     host=DB_HOST,
