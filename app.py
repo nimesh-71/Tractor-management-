@@ -22,15 +22,15 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "tractor-secret-key-2026")
 
-# ==================== CONFIGURATION - UPDATED WITH CORRECT PASSWORD ====================
+# ==================== CONFIGURATION - CORRECT RENDER DATABASE ====================
 
-# Database Configuration - Using your NEW Render database with correct password
-DB_HOST_INTERNAL = "dpg-d9ic81km0tmc73cjktng-a"
-DB_HOST_EXTERNAL = "dpg-d9ic81km0tmc73cjktng-a.oregon-postgres.render.com"
+# Database Configuration - Using your correct Render database
+DB_HOST_INTERNAL = "dpg-d9ic8lkm0tmc73cjkftng-a"
+DB_HOST_EXTERNAL = "dpg-d9ic8lkm0tmc73cjkftng-a.ohio-postgres.render.com"
 DB_PORT = "5432"
 DB_NAME = "agriculture_fubg"
 DB_USER = "agriculture_user"
-DB_PASSWORD = "1hgUHZ8EZqC12xD8JaW4DRmhEAyYgJ5M"  # ✅ Correct password from Render
+DB_PASSWORD = "1hgUHZ8EZqC12xD8JaW4DRmhEAyYgJ5M"
 
 # Build connection strings
 DATABASE_URL_INTERNAL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST_INTERNAL}:{DB_PORT}/{DB_NAME}"
