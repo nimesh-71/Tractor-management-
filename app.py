@@ -29,7 +29,7 @@ DB_HOST = "dpg-d9ic8lkm0tmc73cjktng-a.oregon-postgres.render.com"
 DB_PORT = "5432"
 DB_NAME = "agriculture_fubg"
 DB_USER = "agriculture_user"
-DB_PASSWORD = "1hgUHZ8EZqC12xD8JaW4DRmhEAyYgJ5M"
+DB_PASSWORD = "lhgUHZ8EZqCl2xD8JaW4DRmhEAyYgJ5M"
 
 # Build connection string
 DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}?sslmode=require"
