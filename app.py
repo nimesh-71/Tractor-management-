@@ -25,7 +25,7 @@ app.secret_key = os.environ.get("SECRET_KEY", "tractor-secret-key-2026")
 # ==================== CONFIGURATION - RENDER DATABASE ====================
 
 # Database Configuration - Using your correct Render database
-DB_HOST = "dpg-d9ic8lkm0tmc73cjkftng-a.ohio-postgres.render.com"
+DB_HOST = "dpg-d9ic8lkm0tmc73cjktng-a.oregon-postgres.render.com"
 DB_PORT = "5432"
 DB_NAME = "agriculture_fubg"
 DB_USER = "agriculture_user"
