@@ -1,19 +1,26 @@
 # -*- coding: utf-8 -*-
-from flask import Flask, render_template, request, make_response, jsonify, redirect, url_for, flash, send_from_directory
-import psycopg2
-from psycopg2.extras import RealDictCursor
-from datetime import datetime, timedelta
-import io
 import os
-import re
 import sys
-import unicodedata
-import random
+import re
 import json
-from urllib.parse import quote, urlparse
+import random
 import logging
 import traceback
+import unicodedata
+from datetime import datetime, timedelta
+from urllib.parse import quote, urlparse
+
+from flask import Flask, render_template, request, make_response, jsonify, redirect, url_for, flash, send_from_directory
 from werkzeug.utils import secure_filename
+
+# Try to import psycopg2 with fallback
+try:
+    import psycopg2
+    from psycopg2.extras import RealDictCursor
+    PSYCOPG2_AVAILABLE = True
+except ImportError as e:
+    print(f"⚠️ psycopg2 not available: {e}")
+    PSYCOPG2_AVAILABLE = False
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -22,17 +29,17 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "tractor-secret-key-2026")
 
-# ==================== CONFIGURATION - RENDER DATABASE ====================
+# ==================== CONFIGURATION - READ FROM ENVIRONMENT ====================
 
-# Database Configuration - Using your correct Render database
-DB_HOST = "dpg-d9ic8lkm0tmc73cjkftng-a.ohio-postgres.render.com"
-DB_PORT = "5432"
-DB_NAME = "agriculture_fubg"
-DB_USER = "agriculture_user"
-DB_PASSWORD = "1hgUHZ8EZqC12xD8JaW4DRmhEAyYgJ5M"
+# Database Configuration - Read from Environment Variables
+DB_HOST = os.environ.get("DB_HOST", "dpg-d9ic8lkm0tmc73cjkftng-a.ohio-postgres.render.com")
+DB_PORT = os.environ.get("DB_PORT", "5432")
+DB_NAME = os.environ.get("DB_NAME", "agriculture_fubg")
+DB_USER = os.environ.get("DB_USER", "agriculture_user")
+DB_PASSWORD = os.environ.get("DB_PASSWORD", "1hgUHZ8EZqC12xD8JaW4DRmhEAyYgJ5M")
 
 # Build connection string
-DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}?sslmode=require"
+DATABASE_URL = os.environ.get("DATABASE_URL", f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}?sslmode=require")
 
 logger.info(f"✅ Using host: {DB_HOST}")
 logger.info(f"✅ Database: {DB_NAME}")
@@ -59,9 +66,24 @@ payment_confirmations = {}
 # ==================== DATABASE CONNECTION ====================
 
 def get_db_connection():
-    """Get database connection - Fixed SSL for Render"""
+    """Get database connection - Compatible with Python 3.10"""
     
-    # Method 1: Try with sslmode='require' (Recommended for Render)
+    if not PSYCOPG2_AVAILABLE:
+        logger.error("❌ psycopg2 is not available!")
+        return None
+    
+    # Method 1: Try DATABASE_URL from environment
+    try:
+        database_url = os.environ.get("DATABASE_URL")
+        if database_url:
+            conn = psycopg2.connect(database_url, connect_timeout=30)
+            conn.set_client_encoding('UTF8')
+            logger.info("✅ Database connected successfully via DATABASE_URL!")
+            return conn
+    except Exception as e:
+        logger.warning(f"DATABASE_URL connection failed: {e}")
+    
+    # Method 2: Build connection manually
     try:
         conn = psycopg2.connect(
             host=DB_HOST,
@@ -70,19 +92,15 @@ def get_db_connection():
             password=DB_PASSWORD,
             port=DB_PORT,
             sslmode='require',
-            connect_timeout=60,
-            keepalives=1,
-            keepalives_idle=5,
-            keepalives_interval=2,
-            keepalives_count=2
+            connect_timeout=30
         )
         conn.set_client_encoding('UTF8')
-        logger.info("✅ Database connected successfully (SSL required)!")
+        logger.info("✅ Database connected successfully!")
         return conn
     except Exception as e:
-        logger.warning(f"SSL require failed: {e}")
+        logger.warning(f"Manual connection failed: {e}")
     
-    # Method 2: Try with sslmode='verify-full'
+    # Method 3: Try with sslrootcert=system
     try:
         conn = psycopg2.connect(
             host=DB_HOST,
@@ -90,62 +108,17 @@ def get_db_connection():
             user=DB_USER,
             password=DB_PASSWORD,
             port=DB_PORT,
-            sslmode='verify-full',
-            connect_timeout=60,
-            keepalives=1,
-            keepalives_idle=5,
-            keepalives_interval=2,
-            keepalives_count=2
+            sslmode='require',
+            sslrootcert='system',
+            connect_timeout=30
         )
         conn.set_client_encoding('UTF8')
-        logger.info("✅ Database connected successfully (verify-full)!")
+        logger.info("✅ Database connected successfully (system cert)!")
         return conn
     except Exception as e:
-        logger.warning(f"SSL verify-full failed: {e}")
+        logger.warning(f"System cert connection failed: {e}")
     
-    # Method 3: Try with sslmode='prefer'
-    try:
-        conn = psycopg2.connect(
-            host=DB_HOST,
-            database=DB_NAME,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            port=DB_PORT,
-            sslmode='prefer',
-            connect_timeout=60,
-            keepalives=1,
-            keepalives_idle=5,
-            keepalives_interval=2,
-            keepalives_count=2
-        )
-        conn.set_client_encoding('UTF8')
-        logger.info("✅ Database connected successfully (prefer)!")
-        return conn
-    except Exception as e:
-        logger.warning(f"SSL prefer failed: {e}")
-    
-    # Method 4: Try with sslmode='allow'
-    try:
-        conn = psycopg2.connect(
-            host=DB_HOST,
-            database=DB_NAME,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            port=DB_PORT,
-            sslmode='allow',
-            connect_timeout=60,
-            keepalives=1,
-            keepalives_idle=5,
-            keepalives_interval=2,
-            keepalives_count=2
-        )
-        conn.set_client_encoding('UTF8')
-        logger.info("✅ Database connected successfully (allow)!")
-        return conn
-    except Exception as e:
-        logger.warning(f"SSL allow failed: {e}")
-    
-    # Method 5: Try without SSL (last resort)
+    # Method 4: Last resort - no SSL
     try:
         conn = psycopg2.connect(
             host=DB_HOST,
@@ -154,11 +127,7 @@ def get_db_connection():
             password=DB_PASSWORD,
             port=DB_PORT,
             sslmode='disable',
-            connect_timeout=60,
-            keepalives=1,
-            keepalives_idle=5,
-            keepalives_interval=2,
-            keepalives_count=2
+            connect_timeout=30
         )
         conn.set_client_encoding('UTF8')
         logger.info("✅ Database connected successfully (SSL disabled)!")
@@ -674,458 +643,6 @@ def get_tractor_operation_entries():
         logger.error(f"Error fetching tractor operation entries: {e}")
         logger.error(traceback.format_exc())
         return []
-
-# ==================== HTML GENERATION ====================
-
-def generate_tractor_report_html(farmer_name, rows, total_amount, advance_amount, balance_amount, unpaid_balance, show_full):
-    report_type = "FULL STATEMENT" if show_full else "UNPAID RECORDS"
-    report_id = f"TR{datetime.now().strftime('%Y%m%d%H%M%S')}"
-    current_date = datetime.now().strftime('%d %B %Y at %I:%M %p')
-    
-    payments = get_payment_history(farmer_name)
-    total_payments = len(payments)
-    total_paid_amount = sum(float(p[2] or 0) for p in payments)
-    rounded_total = round_amount(total_amount)
-    calculated_balance = total_amount - advance_amount
-    
-    html = f'''<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Daily Tractor Report - {farmer_name}</title>
-    <style>
-        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-        body {{ 
-            font-family: 'Arial', 'Segoe UI', 'Nirmala UI', sans-serif; 
-            padding: 30px; 
-            background: white;
-            color: #2c3e50;
-            max-width: 1200px;
-            margin: 0 auto;
-        }}
-        .header {{
-            text-align: center;
-            border-bottom: 3px solid #2c3e50;
-            padding-bottom: 15px;
-            margin-bottom: 20px;
-        }}
-        .header h1 {{
-            color: #2c3e50;
-            margin: 0;
-            font-size: 28px;
-            font-weight: bold;
-        }}
-        .header .subtitle {{
-            color: #7f8c8d;
-            font-size: 14px;
-            margin-top: 5px;
-        }}
-        .report-info {{
-            background: #e8f4f8;
-            padding: 15px 20px;
-            border-radius: 8px;
-            margin: 15px 0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-        }}
-        .report-info .label {{
-            color: #7f8c8d;
-            font-size: 14px;
-        }}
-        .report-info .value {{
-            font-weight: bold;
-            font-size: 16px;
-        }}
-        .report-info .farmer-name {{
-            color: #e74c3c;
-            font-weight: bold;
-            font-size: 22px;
-        }}
-        .upi-section {{
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-            padding: 15px 20px;
-            margin: 15px 0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-        }}
-        .upi-section .upi-label {{
-            color: #7f8c8d;
-            font-size: 12px;
-            text-transform: uppercase;
-        }}
-        .upi-section .upi-value {{
-            font-weight: bold;
-            font-size: 16px;
-        }}
-        .upi-section .upi-id {{
-            color: #6c5ce7;
-            font-size: 20px;
-            font-weight: bold;
-        }}
-        .summary-grid {{
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 15px;
-            margin: 20px 0;
-        }}
-        .summary-card {{
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
-            text-align: center;
-            border: 1px solid #dee2e6;
-        }}
-        .summary-card .label {{
-            color: #7f8c8d;
-            font-size: 12px;
-            text-transform: uppercase;
-        }}
-        .summary-card .value {{
-            font-size: 20px;
-            font-weight: bold;
-            margin-top: 5px;
-        }}
-        .summary-card .value.positive {{ color: #27ae60; }}
-        .summary-card .value.negative {{ color: #e74c3c; }}
-        .summary-card .value.primary {{ color: #3498db; }}
-        .summary-card .value.balance {{ 
-            color: #e74c3c; 
-            font-size: 24px;
-            font-weight: 900;
-        }}
-        .summary-card .label.balance-label {{
-            color: #e74c3c;
-            font-weight: 900;
-            font-size: 14px;
-            text-transform: uppercase;
-        }}
-        
-        table {{
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-            font-size: 12px;
-        }}
-        th {{
-            background: #34495e;
-            color: white;
-            padding: 10px 8px;
-            text-align: center;
-            font-weight: 600;
-            font-size: 12px;
-        }}
-        td {{
-            padding: 8px;
-            border-bottom: 1px solid #ecf0f1;
-            text-align: center;
-        }}
-        tr:nth-child(even) {{ background: #f8f9fa; }}
-        .status-paid {{ color: #27ae60; font-weight: bold; }}
-        .status-unpaid {{ color: #e74c3c; font-weight: bold; }}
-        
-        .payment-history {{
-            margin-top: 30px;
-        }}
-        .payment-history h3 {{
-            color: #2c3e50;
-            margin-bottom: 10px;
-            border-bottom: 2px solid #ecf0f1;
-            padding-bottom: 8px;
-            font-size: 18px;
-        }}
-        .payment-summary {{
-            background: #e8f4f8;
-            padding: 10px 15px;
-            border-radius: 8px;
-            margin-top: 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-        }}
-        .footer {{
-            text-align: center;
-            margin-top: 30px;
-            padding-top: 15px;
-            border-top: 2px solid #ecf0f1;
-            color: #95a5a6;
-            font-size: 12px;
-        }}
-        .no-records {{
-            text-align: center;
-            padding: 40px;
-            color: #95a5a6;
-        }}
-        .no-records h3 {{
-            font-size: 18px;
-            margin-bottom: 10px;
-        }}
-        .badge {{
-            display: inline-block;
-            padding: 2px 10px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: bold;
-        }}
-        .badge-upi {{
-            background: #6c5ce7;
-            color: white;
-        }}
-        .badge-cash {{
-            background: #27ae60;
-            color: white;
-        }}
-        .badge-auto {{
-            background: #f39c12;
-            color: white;
-        }}
-        .advance-note {{
-            font-size: 11px;
-            color: #7f8c8d;
-            font-style: italic;
-            margin-top: 5px;
-            text-align: center;
-        }}
-        .phone-cell {{
-            font-family: monospace;
-            font-weight: bold;
-        }}
-        @media print {{
-            body {{ padding: 15px; }}
-            .no-print {{ display: none !important; }}
-            .summary-card {{ background: #f8f9fa !important; }}
-        }}
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h1>DAILY TRACTOR REPORT</h1>
-        <div class="subtitle">Daily Tractor Management System</div>
-    </div>
-    
-    <div class="report-info">
-        <div>
-            <span class="label">Report Date:</span>
-            <span class="value">{current_date}</span>
-        </div>
-        <div>
-            <span class="label">Farmer:</span>
-            <span class="farmer-name">{farmer_name}</span>
-        </div>
-        <div>
-            <span class="label">Report Type:</span>
-            <span class="value">{report_type}</span>
-        </div>
-    </div>
-    
-    <div class="upi-section">
-        <div>
-            <div class="upi-label">Pay via UPI</div>
-            <div class="upi-id">{UPI_ID}</div>
-        </div>
-        <div>
-            <div class="upi-label">Payee</div>
-            <div class="upi-value">{UPI_NAME}</div>
-        </div>
-        <div>
-            <div class="upi-label">Amount</div>
-            <div class="upi-value">₹{calculated_balance:,.2f}</div>
-        </div>
-        <div>
-            <div class="upi-label">Original</div>
-            <div class="upi-value">₹{total_amount:,.2f} (Rounded to ₹{rounded_total:,.2f})</div>
-        </div>
-    </div>
-    
-    <div class="summary-grid">
-        <div class="summary-card">
-            <div class="label">Total Records</div>
-            <div class="value primary">{len(rows)}</div>
-        </div>
-        <div class="summary-card">
-            <div class="label">Total Amount</div>
-            <div class="value positive">₹{total_amount:,.2f}</div>
-        </div>
-        <div class="summary-card">
-            <div class="label">Total Advance</div>
-            <div class="value primary">₹{advance_amount:,.2f}</div>
-        </div>
-        <div class="summary-card">
-            <div class="label balance-label">🔴 BALANCE AMOUNT</div>
-            <div class="value balance">₹{calculated_balance:,.2f}</div>
-        </div>
-        <div class="summary-card">
-            <div class="label">Rounded Amount</div>
-            <div class="value primary">₹{rounded_total:,.2f}</div>
-        </div>
-    </div>
-    
-    <hr style="margin: 20px 0; border: 1px dashed #dee2e6;">'''
-    
-    if rows:
-        html += '''
-    <table>
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>Date</th>
-                <th>Start</th>
-                <th>Stop</th>
-                <th>Time</th>
-                <th>Rate (₹)</th>
-                <th>Amount (₹)</th>
-                <th>Advance (₹)</th>
-                <th>Balance (₹)</th>
-                <th>Reason</th>
-                <th>Phone</th>
-                <th>Status</th>
-            </tr>
-        </thead>
-        <tbody>'''
-        
-        for idx, row in enumerate(rows, 1):
-            if isinstance(row, dict):
-                date_str = row['s_date'].strftime('%d-%m-%Y') if row['s_date'] else ''
-                start_time = row['start_time'].strftime('%H:%M') if row['start_time'] else ''
-                stop_time = row['stop_time'].strftime('%H:%M') if row['stop_time'] else ''
-                rate = float(row['rate'] or 0)
-                amount = float(row['amount'] or 0)
-                advance = float(row['advance_amount'] or 0)
-                record_balance = float(row['balance_amount'] or 0)
-                status = 'PAID' if row['paid'] else 'UNPAID'
-                status_class = 'status-paid' if row['paid'] else 'status-unpaid'
-                reason = row['reason'] or '-'
-                phone = format_phone(row.get('phone'))
-                total_time = row.get('duration', '')
-            else:
-                date_str = row[0].strftime('%d-%m-%Y') if row[0] else ''
-                start_time = row[1].strftime('%H:%M') if row[1] else ''
-                stop_time = row[2].strftime('%H:%M') if row[2] else ''
-                total_time = ''
-                if row[3]:
-                    if hasattr(row[3], 'total_seconds'):
-                        hours = row[3].total_seconds() // 3600
-                        minutes = (row[3].total_seconds() % 3600) // 60
-                        total_time = f'{int(hours):02d}:{int(minutes):02d}'
-                    else:
-                        total_time = str(row[3])
-                rate = float(row[4] or 0)
-                amount = float(row[5] or 0)
-                advance = float(row[6] or 0)
-                record_balance = float(row[7] or 0)
-                status = 'PAID' if row[8] else 'UNPAID'
-                status_class = 'status-paid' if row[8] else 'status-unpaid'
-                reason = row[9] if len(row) > 9 and row[9] else '-'
-                phone = format_phone(row[10] if len(row) > 10 else None)
-            
-            html += f'''
-        <tr>
-            <td>{idx}</td>
-            <td>{date_str}</td>
-            <td>{start_time}</td>
-            <td>{stop_time}</td>
-            <td>{total_time}</td>
-            <td>₹{rate:,.2f}</td>
-            <td>₹{amount:,.2f}</td>
-            <td>₹{advance:,.2f}</td>
-            <td>₹{record_balance:,.2f}</td>
-            <td>{reason}</td>
-            <td class="phone-cell">{phone}</td>
-            <td><span class="{status_class}">{status}</span></td>
-        </tr>'''
-        
-        html += '''
-        </tbody>
-    </table>'''
-        
-        html += f'''
-    <div class="advance-note">
-        * Balance Amount = Total Amount - Total Advance = ₹{total_amount:,.2f} - ₹{advance_amount:,.2f} = ₹{calculated_balance:,.2f}
-    </div>'''
-    else:
-        html += '''
-    <div class="no-records">
-        <h3>📭 No records found</h3>
-        <p>No records available for this farmer</p>
-    </div>'''
-    
-    html += '''
-    <div class="payment-history">
-        <h3>📋 PAYMENT HISTORY</h3>'''
-    
-    if payments:
-        html += '''
-        <table>
-            <thead>
-                <tr>
-                    <th>Payment Date</th>
-                    <th>Record Date</th>
-                    <th>Amount (₹)</th>
-                    <th>Method</th>
-                    <th>Transaction ID</th>
-                    <th>Notes</th>
-                </tr>
-            </thead>
-            <tbody>'''
-        
-        for p in payments:
-            payment_date = p[0].strftime('%d-%m-%Y %H:%M') if p[0] else ''
-            record_date = p[1].strftime('%d-%m-%Y') if p[1] else ''
-            amount = float(p[2] or 0)
-            method = p[3].upper() if p[3] else 'CASH'
-            trans_id = p[4] or 'N/A'
-            notes = p[5] or ''
-            
-            method_badge = f'<span class="badge badge-{method.lower()}">{method}</span>'
-            
-            html += f'''
-        <tr>
-            <td>{payment_date}</td>
-            <td>{record_date}</td>
-            <td><strong>₹{amount:,.2f}</strong></td>
-            <td>{method_badge}</td>
-            <td>{trans_id}</td>
-            <td>{notes}</td>
-        </tr>'''
-        
-        html += '''
-            </tbody>
-        </table>'''
-        
-        html += f'''
-        <div class="payment-summary">
-            <div><strong>Total Payments:</strong> {total_payments}</div>
-            <div><strong>Total Amount Paid:</strong> ₹{total_paid_amount:,.2f}</div>
-        </div>'''
-    else:
-        html += '''
-        <div class="no-records" style="padding:20px;">
-            <p>No payment history found</p>
-        </div>'''
-    
-    html += f'''
-    </div>
-    
-    <div class="footer">
-        Generated by Daily Tractor Management System<br>
-        Report ID: {report_id} | Generated on {current_date}
-    </div>
-    
-    <div style="text-align:center;margin-top:20px;" class="no-print">
-        <button onclick="window.print()" style="background:#2c3e50;color:white;padding:12px 30px;border:none;border-radius:8px;font-size:16px;cursor:pointer;">
-            🖨️ Print / Save as PDF
-        </button>
-    </div>
-</body>
-</html>'''
-    
-    return html
 
 # ==================== ROUTES ====================
 
@@ -1815,6 +1332,458 @@ def api_farmer_totals():
         "advance_amount": advance,
         "balance_amount": total - advance
     })
+
+# ==================== HTML GENERATION ====================
+
+def generate_tractor_report_html(farmer_name, rows, total_amount, advance_amount, balance_amount, unpaid_balance, show_full):
+    report_type = "FULL STATEMENT" if show_full else "UNPAID RECORDS"
+    report_id = f"TR{datetime.now().strftime('%Y%m%d%H%M%S')}"
+    current_date = datetime.now().strftime('%d %B %Y at %I:%M %p')
+    
+    payments = get_payment_history(farmer_name)
+    total_payments = len(payments)
+    total_paid_amount = sum(float(p[2] or 0) for p in payments)
+    rounded_total = round_amount(total_amount)
+    calculated_balance = total_amount - advance_amount
+    
+    html = f'''<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Daily Tractor Report - {farmer_name}</title>
+    <style>
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+        body {{ 
+            font-family: 'Arial', 'Segoe UI', 'Nirmala UI', sans-serif; 
+            padding: 30px; 
+            background: white;
+            color: #2c3e50;
+            max-width: 1200px;
+            margin: 0 auto;
+        }}
+        .header {{
+            text-align: center;
+            border-bottom: 3px solid #2c3e50;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }}
+        .header h1 {{
+            color: #2c3e50;
+            margin: 0;
+            font-size: 28px;
+            font-weight: bold;
+        }}
+        .header .subtitle {{
+            color: #7f8c8d;
+            font-size: 14px;
+            margin-top: 5px;
+        }}
+        .report-info {{
+            background: #e8f4f8;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }}
+        .report-info .label {{
+            color: #7f8c8d;
+            font-size: 14px;
+        }}
+        .report-info .value {{
+            font-weight: bold;
+            font-size: 16px;
+        }}
+        .report-info .farmer-name {{
+            color: #e74c3c;
+            font-weight: bold;
+            font-size: 22px;
+        }}
+        .upi-section {{
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin: 15px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }}
+        .upi-section .upi-label {{
+            color: #7f8c8d;
+            font-size: 12px;
+            text-transform: uppercase;
+        }}
+        .upi-section .upi-value {{
+            font-weight: bold;
+            font-size: 16px;
+        }}
+        .upi-section .upi-id {{
+            color: #6c5ce7;
+            font-size: 20px;
+            font-weight: bold;
+        }}
+        .summary-grid {{
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }}
+        .summary-card {{
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #dee2e6;
+        }}
+        .summary-card .label {{
+            color: #7f8c8d;
+            font-size: 12px;
+            text-transform: uppercase;
+        }}
+        .summary-card .value {{
+            font-size: 20px;
+            font-weight: bold;
+            margin-top: 5px;
+        }}
+        .summary-card .value.positive {{ color: #27ae60; }}
+        .summary-card .value.negative {{ color: #e74c3c; }}
+        .summary-card .value.primary {{ color: #3498db; }}
+        .summary-card .value.balance {{ 
+            color: #e74c3c; 
+            font-size: 24px;
+            font-weight: 900;
+        }}
+        .summary-card .label.balance-label {{
+            color: #e74c3c;
+            font-weight: 900;
+            font-size: 14px;
+            text-transform: uppercase;
+        }}
+        
+        table {{
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 12px;
+        }}
+        th {{
+            background: #34495e;
+            color: white;
+            padding: 10px 8px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 12px;
+        }}
+        td {{
+            padding: 8px;
+            border-bottom: 1px solid #ecf0f1;
+            text-align: center;
+        }}
+        tr:nth-child(even) {{ background: #f8f9fa; }}
+        .status-paid {{ color: #27ae60; font-weight: bold; }}
+        .status-unpaid {{ color: #e74c3c; font-weight: bold; }}
+        
+        .payment-history {{
+            margin-top: 30px;
+        }}
+        .payment-history h3 {{
+            color: #2c3e50;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 8px;
+            font-size: 18px;
+        }}
+        .payment-summary {{
+            background: #e8f4f8;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }}
+        .footer {{
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 2px solid #ecf0f1;
+            color: #95a5a6;
+            font-size: 12px;
+        }}
+        .no-records {{
+            text-align: center;
+            padding: 40px;
+            color: #95a5a6;
+        }}
+        .no-records h3 {{
+            font-size: 18px;
+            margin-bottom: 10px;
+        }}
+        .badge {{
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }}
+        .badge-upi {{
+            background: #6c5ce7;
+            color: white;
+        }}
+        .badge-cash {{
+            background: #27ae60;
+            color: white;
+        }}
+        .badge-auto {{
+            background: #f39c12;
+            color: white;
+        }}
+        .advance-note {{
+            font-size: 11px;
+            color: #7f8c8d;
+            font-style: italic;
+            margin-top: 5px;
+            text-align: center;
+        }}
+        .phone-cell {{
+            font-family: monospace;
+            font-weight: bold;
+        }}
+        @media print {{
+            body {{ padding: 15px; }}
+            .no-print {{ display: none !important; }}
+            .summary-card {{ background: #f8f9fa !important; }}
+        }}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>DAILY TRACTOR REPORT</h1>
+        <div class="subtitle">Daily Tractor Management System</div>
+    </div>
+    
+    <div class="report-info">
+        <div>
+            <span class="label">Report Date:</span>
+            <span class="value">{current_date}</span>
+        </div>
+        <div>
+            <span class="label">Farmer:</span>
+            <span class="farmer-name">{farmer_name}</span>
+        </div>
+        <div>
+            <span class="label">Report Type:</span>
+            <span class="value">{report_type}</span>
+        </div>
+    </div>
+    
+    <div class="upi-section">
+        <div>
+            <div class="upi-label">Pay via UPI</div>
+            <div class="upi-id">{UPI_ID}</div>
+        </div>
+        <div>
+            <div class="upi-label">Payee</div>
+            <div class="upi-value">{UPI_NAME}</div>
+        </div>
+        <div>
+            <div class="upi-label">Amount</div>
+            <div class="upi-value">₹{calculated_balance:,.2f}</div>
+        </div>
+        <div>
+            <div class="upi-label">Original</div>
+            <div class="upi-value">₹{total_amount:,.2f} (Rounded to ₹{rounded_total:,.2f})</div>
+        </div>
+    </div>
+    
+    <div class="summary-grid">
+        <div class="summary-card">
+            <div class="label">Total Records</div>
+            <div class="value primary">{len(rows)}</div>
+        </div>
+        <div class="summary-card">
+            <div class="label">Total Amount</div>
+            <div class="value positive">₹{total_amount:,.2f}</div>
+        </div>
+        <div class="summary-card">
+            <div class="label">Total Advance</div>
+            <div class="value primary">₹{advance_amount:,.2f}</div>
+        </div>
+        <div class="summary-card">
+            <div class="label balance-label">🔴 BALANCE AMOUNT</div>
+            <div class="value balance">₹{calculated_balance:,.2f}</div>
+        </div>
+        <div class="summary-card">
+            <div class="label">Rounded Amount</div>
+            <div class="value primary">₹{rounded_total:,.2f}</div>
+        </div>
+    </div>
+    
+    <hr style="margin: 20px 0; border: 1px dashed #dee2e6;">'''
+    
+    if rows:
+        html += '''
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Date</th>
+                <th>Start</th>
+                <th>Stop</th>
+                <th>Time</th>
+                <th>Rate (₹)</th>
+                <th>Amount (₹)</th>
+                <th>Advance (₹)</th>
+                <th>Balance (₹)</th>
+                <th>Reason</th>
+                <th>Phone</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>'''
+        
+        for idx, row in enumerate(rows, 1):
+            if isinstance(row, dict):
+                date_str = row['s_date'].strftime('%d-%m-%Y') if row['s_date'] else ''
+                start_time = row['start_time'].strftime('%H:%M') if row['start_time'] else ''
+                stop_time = row['stop_time'].strftime('%H:%M') if row['stop_time'] else ''
+                rate = float(row['rate'] or 0)
+                amount = float(row['amount'] or 0)
+                advance = float(row['advance_amount'] or 0)
+                record_balance = float(row['balance_amount'] or 0)
+                status = 'PAID' if row['paid'] else 'UNPAID'
+                status_class = 'status-paid' if row['paid'] else 'status-unpaid'
+                reason = row['reason'] or '-'
+                phone = format_phone(row.get('phone'))
+                total_time = row.get('duration', '')
+            else:
+                date_str = row[0].strftime('%d-%m-%Y') if row[0] else ''
+                start_time = row[1].strftime('%H:%M') if row[1] else ''
+                stop_time = row[2].strftime('%H:%M') if row[2] else ''
+                total_time = ''
+                if row[3]:
+                    if hasattr(row[3], 'total_seconds'):
+                        hours = row[3].total_seconds() // 3600
+                        minutes = (row[3].total_seconds() % 3600) // 60
+                        total_time = f'{int(hours):02d}:{int(minutes):02d}'
+                    else:
+                        total_time = str(row[3])
+                rate = float(row[4] or 0)
+                amount = float(row[5] or 0)
+                advance = float(row[6] or 0)
+                record_balance = float(row[7] or 0)
+                status = 'PAID' if row[8] else 'UNPAID'
+                status_class = 'status-paid' if row[8] else 'status-unpaid'
+                reason = row[9] if len(row) > 9 and row[9] else '-'
+                phone = format_phone(row[10] if len(row) > 10 else None)
+            
+            html += f'''
+        <tr>
+            <td>{idx}</td>
+            <td>{date_str}</td>
+            <td>{start_time}</td>
+            <td>{stop_time}</td>
+            <td>{total_time}</td>
+            <td>₹{rate:,.2f}</td>
+            <td>₹{amount:,.2f}</td>
+            <td>₹{advance:,.2f}</td>
+            <td>₹{record_balance:,.2f}</td>
+            <td>{reason}</td>
+            <td class="phone-cell">{phone}</td>
+            <td><span class="{status_class}">{status}</span></td>
+        </tr>'''
+        
+        html += '''
+        </tbody>
+    </table>'''
+        
+        html += f'''
+    <div class="advance-note">
+        * Balance Amount = Total Amount - Total Advance = ₹{total_amount:,.2f} - ₹{advance_amount:,.2f} = ₹{calculated_balance:,.2f}
+    </div>'''
+    else:
+        html += '''
+    <div class="no-records">
+        <h3>📭 No records found</h3>
+        <p>No records available for this farmer</p>
+    </div>'''
+    
+    html += '''
+    <div class="payment-history">
+        <h3>📋 PAYMENT HISTORY</h3>'''
+    
+    if payments:
+        html += '''
+        <table>
+            <thead>
+                <tr>
+                    <th>Payment Date</th>
+                    <th>Record Date</th>
+                    <th>Amount (₹)</th>
+                    <th>Method</th>
+                    <th>Transaction ID</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>'''
+        
+        for p in payments:
+            payment_date = p[0].strftime('%d-%m-%Y %H:%M') if p[0] else ''
+            record_date = p[1].strftime('%d-%m-%Y') if p[1] else ''
+            amount = float(p[2] or 0)
+            method = p[3].upper() if p[3] else 'CASH'
+            trans_id = p[4] or 'N/A'
+            notes = p[5] or ''
+            
+            method_badge = f'<span class="badge badge-{method.lower()}">{method}</span>'
+            
+            html += f'''
+        <tr>
+            <td>{payment_date}</td>
+            <td>{record_date}</td>
+            <td><strong>₹{amount:,.2f}</strong></td>
+            <td>{method_badge}</td>
+            <td>{trans_id}</td>
+            <td>{notes}</td>
+        </tr>'''
+        
+        html += '''
+            </tbody>
+        </table>'''
+        
+        html += f'''
+        <div class="payment-summary">
+            <div><strong>Total Payments:</strong> {total_payments}</div>
+            <div><strong>Total Amount Paid:</strong> ₹{total_paid_amount:,.2f}</div>
+        </div>'''
+    else:
+        html += '''
+        <div class="no-records" style="padding:20px;">
+            <p>No payment history found</p>
+        </div>'''
+    
+    html += f'''
+    </div>
+    
+    <div class="footer">
+        Generated by Daily Tractor Management System<br>
+        Report ID: {report_id} | Generated on {current_date}
+    </div>
+    
+    <div style="text-align:center;margin-top:20px;" class="no-print">
+        <button onclick="window.print()" style="background:#2c3e50;color:white;padding:12px 30px;border:none;border-radius:8px;font-size:16px;cursor:pointer;">
+            🖨️ Print / Save as PDF
+        </button>
+    </div>
+</body>
+</html>'''
+    
+    return html
 
 # ==================== DATABASE INITIALIZATION ====================
 
