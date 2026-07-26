@@ -29,7 +29,7 @@ DB_HOST = "dpg-d9ic8lkm0tmc73cjkftng-a.ohio-postgres.render.com"
 DB_PORT = "5432"
 DB_NAME = "agriculture_fubg"
 DB_USER = "agriculture_user"
-DB_PASSWORD = "lhgUHZ8EZqCl2xD8JaW4DRmhEAyYgJ5M"
+DB_PASSWORD = "1hgUHZ8EZqC12xD8JaW4DRmhEAyYgJ5M"
 
 # Build connection string
 DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}?sslmode=require"
@@ -59,8 +59,9 @@ payment_confirmations = {}
 # ==================== DATABASE CONNECTION ====================
 
 def get_db_connection():
-    """Get database connection - Fixed for Render"""
+    """Get database connection - Fixed SSL for Render"""
     
+    # Method 1: Try with sslmode='require' (Recommended for Render)
     try:
         conn = psycopg2.connect(
             host=DB_HOST,
@@ -69,16 +70,105 @@ def get_db_connection():
             password=DB_PASSWORD,
             port=DB_PORT,
             sslmode='require',
-            connect_timeout=30
+            connect_timeout=60,
+            keepalives=1,
+            keepalives_idle=5,
+            keepalives_interval=2,
+            keepalives_count=2
         )
         conn.set_client_encoding('UTF8')
-        logger.info("✅ Database connected successfully!")
+        logger.info("✅ Database connected successfully (SSL required)!")
         return conn
     except Exception as e:
-        logger.error(f"❌ Database connection failed: {e}")
+        logger.warning(f"SSL require failed: {e}")
+    
+    # Method 2: Try with sslmode='verify-full'
+    try:
+        conn = psycopg2.connect(
+            host=DB_HOST,
+            database=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            port=DB_PORT,
+            sslmode='verify-full',
+            connect_timeout=60,
+            keepalives=1,
+            keepalives_idle=5,
+            keepalives_interval=2,
+            keepalives_count=2
+        )
+        conn.set_client_encoding('UTF8')
+        logger.info("✅ Database connected successfully (verify-full)!")
+        return conn
+    except Exception as e:
+        logger.warning(f"SSL verify-full failed: {e}")
+    
+    # Method 3: Try with sslmode='prefer'
+    try:
+        conn = psycopg2.connect(
+            host=DB_HOST,
+            database=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            port=DB_PORT,
+            sslmode='prefer',
+            connect_timeout=60,
+            keepalives=1,
+            keepalives_idle=5,
+            keepalives_interval=2,
+            keepalives_count=2
+        )
+        conn.set_client_encoding('UTF8')
+        logger.info("✅ Database connected successfully (prefer)!")
+        return conn
+    except Exception as e:
+        logger.warning(f"SSL prefer failed: {e}")
+    
+    # Method 4: Try with sslmode='allow'
+    try:
+        conn = psycopg2.connect(
+            host=DB_HOST,
+            database=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            port=DB_PORT,
+            sslmode='allow',
+            connect_timeout=60,
+            keepalives=1,
+            keepalives_idle=5,
+            keepalives_interval=2,
+            keepalives_count=2
+        )
+        conn.set_client_encoding('UTF8')
+        logger.info("✅ Database connected successfully (allow)!")
+        return conn
+    except Exception as e:
+        logger.warning(f"SSL allow failed: {e}")
+    
+    # Method 5: Try without SSL (last resort)
+    try:
+        conn = psycopg2.connect(
+            host=DB_HOST,
+            database=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            port=DB_PORT,
+            sslmode='disable',
+            connect_timeout=60,
+            keepalives=1,
+            keepalives_idle=5,
+            keepalives_interval=2,
+            keepalives_count=2
+        )
+        conn.set_client_encoding('UTF8')
+        logger.info("✅ Database connected successfully (SSL disabled)!")
+        return conn
+    except Exception as e:
+        logger.error(f"❌ All connection methods failed: {e}")
         return None
 
 def get_db():
+    """Alias for get_db_connection"""
     return get_db_connection()
 
 def allowed_file(filename):
