@@ -36,7 +36,7 @@ DB_HOST = os.environ.get("DB_HOST", "dpg-d9j2h6ernols7383p6sg-a.oregon-postgres.
 DB_PORT = os.environ.get("DB_PORT", "5432")
 DB_NAME = os.environ.get("DB_NAME", "agriculture_fubg")
 DB_USER = os.environ.get("DB_USER", "agriculture_user")
-DB_PASSWORD = os.environ.get("DB_PASSWORD", "fg8d6hivZt8d9pFaTzT8W9YSLZ8biz8")
+DB_PASSWORD = os.environ.get("DB_PASSWORD", "fga6oAhvZNzdWpfaTZwTB9XY5LZr0ziz")
 
 # Build connection string
 DATABASE_URL = os.environ.get("DATABASE_URL", f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}?sslmode=require")
