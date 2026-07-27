@@ -32,14 +32,13 @@ app.secret_key = os.environ.get("SECRET_KEY", "tractor-secret-key-2026")
 # ==================== CONFIGURATION - READ FROM ENVIRONMENT ====================
 
 # Database Configuration - Read from Environment Variables
-# Use internal hostname without domain for Render internal communication
 DB_HOST = os.environ.get("DB_HOST", "dpg-d9jprgrrjlhs738up8s0-a")
 DB_PORT = os.environ.get("DB_PORT", "5432")
 DB_NAME = os.environ.get("DB_NAME", "agriculture_j87v")
 DB_USER = os.environ.get("DB_USER", "agriculture_j87v_user")
 DB_PASSWORD = os.environ.get("DB_PASSWORD", "ky10IEQhXEynjT7R0KTqOv2NUOxD7e38")
 
-# Build connection string - Use internal hostname without domain
+# Build connection string
 DATABASE_URL = os.environ.get("DATABASE_URL", f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}?sslmode=require")
 
 logger.info(f"✅ Using host: {DB_HOST}")
@@ -160,7 +159,7 @@ def get_db():
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# ==================== TEST ROUTE ====================
+# ==================== TEST ROUTES ====================
 
 @app.route('/test-connection')
 def test_connection():
@@ -196,6 +195,62 @@ def test_connection():
         <p><strong>Database:</strong> {DB_NAME}</p>
         <p><strong>User:</strong> {DB_USER}</p>
         """
+
+@app.route('/debug-farmers')
+def debug_farmers():
+    """Debug route to check farmer data"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return "❌ Database connection failed!"
+        
+        cursor = conn.cursor()
+        
+        # Check all records
+        cursor.execute("SELECT COUNT(*) FROM daily_tractor")
+        total_count = cursor.fetchone()[0]
+        
+        # Get sample records
+        cursor.execute("SELECT sl_no, s_date, iname, phone, amount, balance_amount FROM daily_tractor LIMIT 5")
+        sample_records = cursor.fetchall()
+        
+        # Get farmer names
+        cursor.execute("SELECT DISTINCT iname FROM daily_tractor")
+        farmers = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        html = f"""
+        <h2>🔍 Database Debug Info</h2>
+        <p><strong>Total Records:</strong> {total_count}</p>
+        <p><strong>Total Farmers:</strong> {len(farmers)}</p>
+        <h3>Farmers:</h3>
+        <ul>
+        """
+        for farmer in farmers:
+            html += f"<li>{farmer[0]}</li>"
+        html += "</ul>"
+        
+        html += "<h3>Sample Records:</h3>"
+        html += "<table border='1' style='border-collapse: collapse; padding: 5px;'>"
+        html += "<tr><th>SL No</th><th>Date</th><th>Farmer</th><th>Phone</th><th>Amount</th><th>Balance</th></tr>"
+        for record in sample_records:
+            html += f"""
+            <tr>
+                <td>{record[0]}</td>
+                <td>{record[1]}</td>
+                <td>{record[2]}</td>
+                <td>{record[3]}</td>
+                <td>{record[4]}</td>
+                <td>{record[5]}</td>
+            </tr>
+            """
+        html += "</table>"
+        
+        return html
+    except Exception as e:
+        return f"❌ Error: {str(e)}"
 
 # ==================== HELPER FUNCTIONS ====================
 
@@ -590,6 +645,8 @@ def get_daily_tractor_entries(show_full=True, farmer_name=None):
         cursor.close()
         conn.close()
         
+        logger.info(f"📊 Found {len(entries)} daily tractor entries")
+        
         result = []
         for entry in entries:
             entry_dict = {
@@ -614,6 +671,7 @@ def get_daily_tractor_entries(show_full=True, farmer_name=None):
         return result
     except Exception as e:
         logger.error(f"Error fetching daily tractor entries: {e}")
+        logger.error(traceback.format_exc())
         return []
 
 def get_farmer_names():
@@ -629,6 +687,7 @@ def get_farmer_names():
         for name in cur.fetchall():
             clean_name = clean_text(name[0])
             farmer_names.append(clean_name)
+        logger.info(f"📊 Found {len(farmer_names)} farmers")
         return farmer_names
     except Exception as e:
         logger.error(f"Error getting farmer names: {e}")
@@ -863,6 +922,8 @@ def daily_tractor_form():
     
     calculated_balance = total_amount - advance_amount
     
+    logger.info(f"📊 Daily Tractor Page - Total Records: {len(entries)}")
+    
     return render_template('daily_tractor.html',
         reason_options=reason_options,
         entries=entries,
@@ -881,38 +942,34 @@ def daily_tractor_report():
     selected_farmer = request.args.get("farmer_name", "")
     show_full = request.args.get("show_full_statement", "true") == "true"
     
+    # Get all farmer names for the dropdown
     farmer_names = get_farmer_names()
     
-    rows = []
-    total_amount = 0.0
-    advance_amount = 0.0
-    balance_amount = 0.0
-    paid_records = 0
-    unpaid_records = 0
-    payment_history = []
-    
+    # Get all records - this is the key fix!
     if selected_farmer:
+        # If a farmer is selected, get their records
         rows = get_daily_tractor_entries(show_full, selected_farmer)
         total_amount, advance_amount, balance_amount = get_farmer_totals(selected_farmer)
         payment_history = get_payment_history(selected_farmer)
-        
-        for entry in rows:
-            if entry.get('paid', False):
-                paid_records += 1
-            else:
-                unpaid_records += 1
     else:
-        rows = get_daily_tractor_entries(True)
+        # If NO farmer is selected, show ALL records
+        rows = get_daily_tractor_entries(True)  # Get ALL entries
+        total_amount = 0.0
+        advance_amount = 0.0
+        balance_amount = 0.0
+        payment_history = []
         for entry in rows:
             total_amount += float(entry.get('amount', 0))
             advance_amount += float(entry.get('advance_amount', 0))
             balance_amount += float(entry.get('balance_amount', 0))
-            if entry.get('paid', False):
-                paid_records += 1
-            else:
-                unpaid_records += 1
+    
+    # Calculate paid/unpaid counts
+    paid_records = sum(1 for entry in rows if entry.get('paid', False))
+    unpaid_records = len(rows) - paid_records
     
     calculated_balance = total_amount - advance_amount
+    
+    logger.info(f"📊 Report - Total Records: {len(rows)}, Total Amount: {total_amount}")
     
     return render_template('daily_tractor_report.html',
         rows=rows,
@@ -966,6 +1023,7 @@ def insert_daily_tractor():
             flash('✅ डेली ट्रैक्टर प्रविष्टि सफलतापूर्वक सहेजी गई!', 'success')
             return redirect(url_for('daily_tractor_form'))
         except Exception as e:
+            logger.error(f"Error inserting daily tractor: {e}")
             flash(f'Error: {str(e)}', 'error')
             return redirect(url_for('daily_tractor_form'))
 
@@ -2006,6 +2064,7 @@ if __name__ == '__main__':
     print(f"  - http://0.0.0.0:{port}/tractor_operation (Tractor Operation)")
     print(f"  - http://0.0.0.0:{port}/download_tractor_report_pdf (Generate Reports)")
     print(f"  - http://0.0.0.0:{port}/test-connection (Test Database Connection)")
+    print(f"  - http://0.0.0.0:{port}/debug-farmers (Debug Database)")
     print(f"\n💰 UPI ID: {UPI_ID}")
     print("="*70 + "\n")
     
