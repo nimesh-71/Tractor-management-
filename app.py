@@ -32,13 +32,14 @@ app.secret_key = os.environ.get("SECRET_KEY", "tractor-secret-key-2026")
 # ==================== CONFIGURATION - READ FROM ENVIRONMENT ====================
 
 # Database Configuration - Read from Environment Variables
-DB_HOST = os.environ.get("DB_HOST", "dpg-d9j2h6ernols7383p6sg-a.oregon-postgres.render.com")
+# Use internal hostname without domain for Render internal communication
+DB_HOST = os.environ.get("DB_HOST", "dpg-d9j2h6ernols7383p6sg-a")
 DB_PORT = os.environ.get("DB_PORT", "5432")
 DB_NAME = os.environ.get("DB_NAME", "agriculture_fubg")
 DB_USER = os.environ.get("DB_USER", "agriculture_user")
 DB_PASSWORD = os.environ.get("DB_PASSWORD", "fga6oAhvZNzdWpfaTZwTB9XY5LZr0ziz")
 
-# Build connection string
+# Build connection string - Use internal hostname without domain
 DATABASE_URL = os.environ.get("DATABASE_URL", f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}?sslmode=require")
 
 logger.info(f"✅ Using host: {DB_HOST}")
@@ -66,25 +67,34 @@ payment_confirmations = {}
 # ==================== DATABASE CONNECTION ====================
 
 def get_db_connection():
-    """Get database connection - Compatible with Python 3.10"""
+    """Get database connection with improved handling"""
     
     if not PSYCOPG2_AVAILABLE:
         logger.error("❌ psycopg2 is not available!")
         return None
     
-    # Method 1: Try DATABASE_URL from environment
+    # First try: Use DATABASE_URL from environment
     try:
         database_url = os.environ.get("DATABASE_URL")
         if database_url:
-            conn = psycopg2.connect(database_url, connect_timeout=30)
+            logger.info(f"🔄 Trying DATABASE_URL connection...")
+            conn = psycopg2.connect(
+                database_url,
+                connect_timeout=30,
+                keepalives=1,
+                keepalives_idle=30,
+                keepalives_interval=10,
+                keepalives_count=5
+            )
             conn.set_client_encoding('UTF8')
-            logger.info("✅ Database connected successfully via DATABASE_URL!")
+            logger.info("✅ Connected via DATABASE_URL!")
             return conn
     except Exception as e:
-        logger.warning(f"DATABASE_URL connection failed: {e}")
+        logger.warning(f"DATABASE_URL failed: {e}")
     
-    # Method 2: Build connection manually
+    # Second try: Manual connection with SSL
     try:
+        logger.info(f"🔄 Manual connection to {DB_HOST}...")
         conn = psycopg2.connect(
             host=DB_HOST,
             database=DB_NAME,
@@ -92,16 +102,39 @@ def get_db_connection():
             password=DB_PASSWORD,
             port=DB_PORT,
             sslmode='require',
-            connect_timeout=30
+            connect_timeout=30,
+            keepalives=1,
+            keepalives_idle=30,
+            keepalives_interval=10,
+            keepalives_count=5
         )
         conn.set_client_encoding('UTF8')
-        logger.info("✅ Database connected successfully!")
+        logger.info("✅ Manual connection successful!")
         return conn
     except Exception as e:
         logger.warning(f"Manual connection failed: {e}")
     
-    # Method 3: Try with SSL disabled (last resort)
+    # Third try: Try with SSL prefer
     try:
+        logger.info(f"🔄 Trying SSL prefer...")
+        conn = psycopg2.connect(
+            host=DB_HOST,
+            database=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            port=DB_PORT,
+            sslmode='prefer',
+            connect_timeout=30
+        )
+        conn.set_client_encoding('UTF8')
+        logger.info("✅ Connected with SSL prefer!")
+        return conn
+    except Exception as e:
+        logger.warning(f"SSL prefer failed: {e}")
+    
+    # Fourth try: Without SSL (last resort)
+    try:
+        logger.info(f"🔄 Trying without SSL...")
         conn = psycopg2.connect(
             host=DB_HOST,
             database=DB_NAME,
@@ -112,12 +145,12 @@ def get_db_connection():
             connect_timeout=30
         )
         conn.set_client_encoding('UTF8')
-        logger.info("✅ Database connected successfully (SSL disabled)!")
+        logger.info("✅ Connected without SSL!")
         return conn
     except Exception as e:
-        logger.warning(f"SSL disabled connection failed: {e}")
+        logger.warning(f"Without SSL failed: {e}")
     
-    logger.error(f"❌ All connection methods failed")
+    logger.error("❌ All connection methods failed!")
     return None
 
 def get_db():
@@ -126,6 +159,43 @@ def get_db():
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+# ==================== TEST ROUTE ====================
+
+@app.route('/test-connection')
+def test_connection():
+    """Test database connection with detailed results"""
+    try:
+        conn = get_db_connection()
+        if conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT version()")
+            version = cursor.fetchone()[0]
+            cursor.close()
+            conn.close()
+            return f"""
+            <h2>✅ Database Connection Successful!</h2>
+            <p><strong>Host:</strong> {DB_HOST}</p>
+            <p><strong>Database:</strong> {DB_NAME}</p>
+            <p><strong>User:</strong> {DB_USER}</p>
+            <p><strong>PostgreSQL Version:</strong> {version}</p>
+            """
+        else:
+            return f"""
+            <h2>❌ Database Connection Failed!</h2>
+            <p><strong>Host:</strong> {DB_HOST}</p>
+            <p><strong>Database:</strong> {DB_NAME}</p>
+            <p><strong>User:</strong> {DB_USER}</p>
+            <p>Please check your database credentials and network settings.</p>
+            """
+    except Exception as e:
+        return f"""
+        <h2>❌ Connection Error</h2>
+        <p><strong>Error:</strong> {str(e)}</p>
+        <p><strong>Host:</strong> {DB_HOST}</p>
+        <p><strong>Database:</strong> {DB_NAME}</p>
+        <p><strong>User:</strong> {DB_USER}</p>
+        """
 
 # ==================== HELPER FUNCTIONS ====================
 
@@ -1935,6 +2005,7 @@ if __name__ == '__main__':
     print(f"  - http://0.0.0.0:{port}/daily_tractor_report (Daily Tractor Report)")
     print(f"  - http://0.0.0.0:{port}/tractor_operation (Tractor Operation)")
     print(f"  - http://0.0.0.0:{port}/download_tractor_report_pdf (Generate Reports)")
+    print(f"  - http://0.0.0.0:{port}/test-connection (Test Database Connection)")
     print(f"\n💰 UPI ID: {UPI_ID}")
     print("="*70 + "\n")
     
