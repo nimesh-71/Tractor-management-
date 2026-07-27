@@ -34,9 +34,9 @@ app.secret_key = os.environ.get("SECRET_KEY", "tractor-secret-key-2026")
 # Database Configuration - Read from Environment Variables
 DB_HOST = os.environ.get("DB_HOST", "dpg-d9j2h6ernols7383p6sg-a.oregon-postgres.render.com")
 DB_PORT = os.environ.get("DB_PORT", "5432")
-DB_NAME = os.environ.get("DB_NAME", "agrocloud_user")
-DB_USER = os.environ.get("DB_USER", "agrocloud_user")
-DB_PASSWORD = os.environ.get("DB_PASSWORD", "	fga6oAhvZNzdWpfaTZwTB9XY5LZr0ziz")  # ⚠️ UPDATE THIS WITH YOUR ACTUAL PASSWORD
+DB_NAME = os.environ.get("DB_NAME", "agriculture_fubg")
+DB_USER = os.environ.get("DB_USER", "agriculture_user")
+DB_PASSWORD = os.environ.get("DB_PASSWORD", "fg8d6hivZt8d9pFaTzT8W9YSLZ8biz8")
 
 # Build connection string
 DATABASE_URL = os.environ.get("DATABASE_URL", f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}?sslmode=require")
@@ -100,25 +100,7 @@ def get_db_connection():
     except Exception as e:
         logger.warning(f"Manual connection failed: {e}")
     
-    # Method 3: Try with sslrootcert=system
-    try:
-        conn = psycopg2.connect(
-            host=DB_HOST,
-            database=DB_NAME,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            port=DB_PORT,
-            sslmode='require',
-            sslrootcert='system',
-            connect_timeout=30
-        )
-        conn.set_client_encoding('UTF8')
-        logger.info("✅ Database connected successfully (system cert)!")
-        return conn
-    except Exception as e:
-        logger.warning(f"System cert connection failed: {e}")
-    
-    # Method 4: Last resort - no SSL
+    # Method 3: Try with SSL disabled (last resort)
     try:
         conn = psycopg2.connect(
             host=DB_HOST,
@@ -133,8 +115,10 @@ def get_db_connection():
         logger.info("✅ Database connected successfully (SSL disabled)!")
         return conn
     except Exception as e:
-        logger.error(f"❌ All connection methods failed: {e}")
-        return None
+        logger.warning(f"SSL disabled connection failed: {e}")
+    
+    logger.error(f"❌ All connection methods failed")
+    return None
 
 def get_db():
     """Alias for get_db_connection"""
@@ -1883,6 +1867,7 @@ def init_db():
         conn.commit()
         logger.info("✅ All database tables initialized successfully!")
         
+        # Check if tables have data, add sample data if empty
         cursor.execute("SELECT COUNT(*) FROM diesel_purchase")
         count = cursor.fetchone()[0]
         if count == 0:
