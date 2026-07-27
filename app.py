@@ -33,11 +33,11 @@ app.secret_key = os.environ.get("SECRET_KEY", "tractor-secret-key-2026")
 
 # Database Configuration - Read from Environment Variables
 # Use internal hostname without domain for Render internal communication
-DB_HOST = os.environ.get("DB_HOST", "dpg-d9j2h6ernols7383p6sg-a")
+DB_HOST = os.environ.get("DB_HOST", "dpg-d9jprgrrjlhs738up8s0-a")
 DB_PORT = os.environ.get("DB_PORT", "5432")
-DB_NAME = os.environ.get("DB_NAME", "agriculture_fubg")
-DB_USER = os.environ.get("DB_USER", "agriculture_user")
-DB_PASSWORD = os.environ.get("DB_PASSWORD", "fga6oAhvZNzdWpfaTZwTB9XY5LZr0ziz")
+DB_NAME = os.environ.get("DB_NAME", "agriculture_j87v")
+DB_USER = os.environ.get("DB_USER", "agriculture_j87v_user")
+DB_PASSWORD = os.environ.get("DB_PASSWORD", "ky10IEQhXEynjT7R0KTqOv2NUOxD7e38")
 
 # Build connection string - Use internal hostname without domain
 DATABASE_URL = os.environ.get("DATABASE_URL", f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}?sslmode=require")
