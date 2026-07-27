@@ -34,7 +34,7 @@ app.secret_key = os.environ.get("SECRET_KEY", "tractor-secret-key-2026")
 # Database Configuration - Read from Environment Variables
 DB_HOST = os.environ.get("DB_HOST", "dpg-d9j2h6ernols7383p6sg-a.oregon-postgres.render.com")
 DB_PORT = os.environ.get("DB_PORT", "5432")
-DB_NAME = os.environ.get("DB_NAME", "agriculture_fubg")
+DB_NAME = os.environ.get("DB_NAME", "agrocloud_user")
 DB_USER = os.environ.get("DB_USER", "agrocloud_user")
 DB_PASSWORD = os.environ.get("DB_PASSWORD", "	fga6oAhvZNzdWpfaTZwTB9XY5LZr0ziz")  # ⚠️ UPDATE THIS WITH YOUR ACTUAL PASSWORD
 
